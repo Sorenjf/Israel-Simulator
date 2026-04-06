@@ -98,6 +98,7 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 .emoji-opt:hover { background: rgba(255,255,255,0.15); }
 .emoji-opt.selected { border-color: #e94560; background: rgba(233,69,96,0.2); }
+.emoji-opt.taken { opacity: 0.3; cursor: not-allowed !important; pointer-events: none; }
 #lobby-status { color: #a0a0c0; font-size: 0.9em; }
 .btn-start { background: #27ae60; color: #fff; margin-top: 10px; }
 .btn-start:hover { background: #2ecc71; }
@@ -1214,7 +1215,12 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   </div>
 
   <div class="lobby-box" id="lobby-joining" style="display:none">
-    <h3>Joining Room...</h3>
+    <h3 id="lobby-joining-title">Joining Room...</h3>
+    <div id="guest-color-section" style="display:none">
+      <label style="color:#a0a0c0;font-size:0.9em">Choose Your Color</label>
+      <div class="emoji-picker" id="guest-color-picker"></div>
+      <button class="lobby-btn btn-join" id="btn-confirm-color" onclick="confirmGuestColor()">Join Game</button>
+    </div>
     <div class="player-list" id="lobby-players-guest"></div>
     <div id="lobby-guest-status" style="margin-top:10px;color:#a0a0c0"></div>
   </div>
@@ -1467,6 +1473,8 @@ const CHEST_RARE = { text:'⚠️ YAHU SEIZURE! Yahu seizes one of your unhoused
 // =============================================
 let ws = null; // single WebSocket to relay server
 let isHost = false;
+let pendingGuests = {}; // host only: socketId -> {name, socketId} waiting for color pick
+let guestSelectedColor = null; // guest only: color picked in join color picker
 let myId = null;
 let roomCode = '';
 let socketIdToPlayerIdx = {}; // host only: guest socketId -> playerIndex
@@ -1495,6 +1503,50 @@ function initEmojiPicker() {
   selectedEmoji = PLAYER_COLORS[0];
 }
 initEmojiPicker();
+
+function showGuestColorPicker(takenColors) {
+  const section = document.getElementById('guest-color-section');
+  const picker = document.getElementById('guest-color-picker');
+  const title = document.getElementById('lobby-joining-title');
+  title.textContent = 'Choose Your Color';
+  picker.innerHTML = '';
+  guestSelectedColor = null;
+  let firstAvailable = null;
+
+  PLAYER_COLORS.forEach((color, i) => {
+    const taken = takenColors.includes(color);
+    const d = document.createElement('div');
+    d.className = 'emoji-opt' + (taken ? ' taken' : '');
+    d.innerHTML = `<div style="width:30px;height:30px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,0.5);box-shadow:0 0 8px ${color};${taken ? 'opacity:0.2;filter:grayscale(0.8)' : ''}"></div>`;
+    if(taken) {
+      d.style.cursor = 'not-allowed';
+      d.title = 'Already taken';
+    } else {
+      if(!firstAvailable) {
+        firstAvailable = color;
+        d.classList.add('selected');
+        guestSelectedColor = color;
+      }
+      d.onclick = () => {
+        picker.querySelectorAll('.emoji-opt:not(.taken)').forEach(x => x.classList.remove('selected'));
+        d.classList.add('selected');
+        guestSelectedColor = color;
+      };
+    }
+    picker.appendChild(d);
+  });
+
+  section.style.display = 'block';
+  document.getElementById('btn-confirm-color').disabled = !guestSelectedColor;
+}
+
+function confirmGuestColor() {
+  if(!guestSelectedColor || !ws || ws.readyState !== 1) return;
+  ws.send(JSON.stringify({ type: 'colorPicked', color: guestSelectedColor }));
+  document.getElementById('guest-color-section').style.display = 'none';
+  document.getElementById('lobby-joining-title').textContent = 'Joined!';
+  document.getElementById('lobby-guest-status').textContent = 'Waiting for host to start...';
+}
 
 function getPlayerName() {
   return document.getElementById('inp-name').value.trim() || 'Player';
@@ -1739,7 +1791,7 @@ function joinRoom() {
   ws = new WebSocket(`${protocol}//${location.host}`);
 
   ws.onopen = () => {
-    ws.send(JSON.stringify({ type: 'joinRoom', roomCode, name: getPlayerName(), emoji: selectedEmoji }));
+    ws.send(JSON.stringify({ type: 'joinRoom', roomCode, name: getPlayerName() }));
   };
 
   ws.onmessage = (e) => {
@@ -1749,7 +1801,11 @@ function joinRoom() {
     if (data.type === 'joined') {
       document.getElementById('lobby-main').style.display = 'none';
       document.getElementById('lobby-joining').style.display = 'block';
-      document.getElementById('lobby-guest-status').textContent = 'Connected! Waiting for host to start...';
+      document.getElementById('lobby-guest-status').textContent = 'Connected! Choose your color to join.';
+      return;
+    }
+    if (data.type === 'pickColor') {
+      showGuestColorPicker(data.takenColors || []);
       return;
     }
     if (data.type === 'error') {
@@ -1773,11 +1829,22 @@ function joinRoom() {
 // HOST: handle messages from guests (via relay server)
 function handleHostMessage(data) {
   if(data.type === 'join') {
-    const idx = addPlayerToState(data.name, data.emoji);
-    socketIdToPlayerIdx[data.socketId] = idx;
-    playerIdxToSocketId[idx] = data.socketId;
+    // Don't add player yet — send taken colors so guest can pick
+    if(!pendingGuests) pendingGuests = {};
+    pendingGuests[data.socketId] = { name: data.name, socketId: data.socketId };
+    const takenColors = gameState.players.map(p => p.emoji);
+    wsSend({ type:'pickColor', takenColors, _targetSocketId: data.socketId });
+  }
+  if(data.type === 'colorPicked') {
+    const socketId = data._senderSocketId;
+    const pending = pendingGuests && pendingGuests[socketId];
+    if(!pending) return;
+    delete pendingGuests[socketId];
+    const idx = addPlayerToState(pending.name, data.color);
+    socketIdToPlayerIdx[socketId] = idx;
+    playerIdxToSocketId[idx] = socketId;
     // Tell this specific guest their index
-    wsSend({ type:'assignIndex', index: idx, _targetSocketId: data.socketId });
+    wsSend({ type:'assignIndex', index: idx, _targetSocketId: socketId });
     broadcastState();
     // Update UI depending on phase
     if(gameState.phase === 'waiting') {
@@ -1796,6 +1863,10 @@ function handleHostMessage(data) {
     wsSend({ type:'chat', msg: data.msg, _excludeSocketId: data._senderSocketId });
   }
   if(data.type === 'guestDisconnected') {
+    // Clean up pending guest if they hadn't picked a color yet
+    if(pendingGuests && pendingGuests[data.socketId]) {
+      delete pendingGuests[data.socketId];
+    }
     const pi = socketIdToPlayerIdx[data.socketId];
     if(pi !== undefined && gameState && gameState.players[pi] && !gameState.players[pi].bankrupt) {
       addLog(`⚠️ ${gameState.players[pi].emoji} ${gameState.players[pi].name} disconnected`);
@@ -1937,11 +2008,17 @@ function addPlayerToState(name, emoji) {
 const BOT_NAMES = ['Yahu Jr.', 'Cookie Monster', 'BART Bot', 'Golden Bot', 'Monkey Bot', 'Tax Man', 'Settler Bot', 'Dice Lord'];
 let botCount = 0;
 
+function getNextAvailableColor() {
+  const taken = gameState ? gameState.players.map(p => p.emoji) : [];
+  // Also exclude colors pending guests are about to pick (they haven't confirmed yet, but avoid conflicts)
+  return PLAYER_COLORS.find(c => !taken.includes(c)) || PLAYER_COLORS[0];
+}
+
 function addBot() {
   if(!isHost || !gameState) return;
   const name = BOT_NAMES[botCount % BOT_NAMES.length];
   botCount++;
-  const idx = addPlayerToState(name, PLAYER_COLORS[(gameState.players.length - 1) % PLAYER_COLORS.length]);
+  const idx = addPlayerToState(name, getNextAvailableColor());
   gameState.players[idx].isBot = true;
   broadcastState();
   updateWaitingOverlay();
@@ -2376,7 +2453,7 @@ function renderPlayers() {
 
     const canKick = i !== myPlayerIndex && !p.bankrupt && gameState.players.filter(pl => !pl.bankrupt).length > 2;
 
-    const playerColor = PLAYER_COLORS[i] || '#888';
+    const playerColor = p.emoji || '#888';
     card.style.borderLeft = `4px solid ${playerColor}`;
 
     card.innerHTML = `
@@ -2502,7 +2579,7 @@ function renderTokens() {
       token.className = 'token-on-board' + (pi === gameState.currentPlayer ? ' current-player' : '');
       token.dataset.playerIdx = pi;
       token.dataset.cellPos = p.position;
-      const pColor = PLAYER_COLORS[pi] || '#888';
+      const pColor = p.emoji || '#888';
       token.style.background = pColor;
       token.style.setProperty('--token-color', pColor);
       const coords = posToCoords(p.position);
@@ -2530,7 +2607,7 @@ function renderBoard() {
     // Update color bar: player color when owned, price when unowned
     if(bar && (cell.type === 'property' || cell.type === 'railroad' || cell.type === 'utility')) {
       if(prop.owner >= 0) {
-        const playerColor = PLAYER_COLORS[prop.owner] || '#888';
+        const playerColor = (gameState.players[prop.owner] && gameState.players[prop.owner].emoji) || '#888';
         if(prop.mortgaged) {
           // Mortgaged — dim the bar and show M indicator
           bar.style.setProperty('--bar-color', '#555');
@@ -2664,7 +2741,7 @@ function renderActionPanel() {
   const cp = gameState.players[gameState.currentPlayer];
 
   // Show current player emoji and name large in center
-  const cpColor = PLAYER_COLORS[gameState.currentPlayer] || '#888';
+  const cpColor = (cp && cp.emoji) || '#888';
   hudPlayer.innerHTML = `<div style="width:50px;height:50px;border-radius:50%;background:${cpColor};border:3px solid rgba(255,255,255,0.6);box-shadow:0 0 16px ${cpColor};margin:0 auto"></div>`;
   hudPlayerName.textContent = cp?.name || '';
 
@@ -4449,7 +4526,7 @@ function closeTradeModal() {
 // Helper: render a player's color dot as inline HTML
 function playerDot(playerOrIdx) {
   const idx = typeof playerOrIdx === 'number' ? playerOrIdx : gameState?.players?.indexOf(playerOrIdx);
-  const color = (idx >= 0 && PLAYER_COLORS[idx]) ? PLAYER_COLORS[idx] : '#888';
+  const color = (idx >= 0 && gameState?.players?.[idx]?.emoji) ? gameState.players[idx].emoji : '#888';
   return `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${color};border:1px solid rgba(255,255,255,0.4);vertical-align:middle;margin:0 2px"></span>`;
 }
 
