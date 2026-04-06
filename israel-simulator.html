@@ -371,7 +371,7 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   position: absolute; z-index: 10; width: 36px; height: 36px; border-radius: 50%;
   border: 3px solid rgba(255,255,255,0.85);
   box-shadow: 0 3px 8px rgba(0,0,0,0.6), 0 0 18px var(--token-color, #e94560);
-  transition: left 0.25s ease-out, top 0.25s ease-out;
+  transition: left 0.12s ease-out, top 0.12s ease-out;
   pointer-events: none;
   background: var(--token-color, #e94560);
   /* Glossy effect */
@@ -2452,7 +2452,7 @@ function renderTokens() {
 
         if(steps.length > 0 && steps.length <= 14) {
           token._stepping = true;
-          const STEP_DELAY = 150;
+          const STEP_DELAY = 80;
           steps.forEach((cellIdx, i) => {
             setTimeout(() => {
               const coords = posToCoords(cellIdx);
@@ -2793,6 +2793,9 @@ function handlePlayerAction(playerIdx, action, payload) {
   // Votekick actions can come from any player
   if(action === 'votekickStart') {
     activeVotekick = payload;
+    const initiator = gameState.players[payload.initiatorIdx];
+    const target = gameState.players[payload.targetIdx];
+    broadcastSystemChat(`⚠️ ${initiator.name} started a vote to kick ${target.name}! Everyone must vote.`);
     showVotekickModal();
     wsSend({ type:'votekick', vote: activeVotekick });
     checkVotekickResult();
@@ -3705,12 +3708,17 @@ function renderChatMessage(msg) {
   const isMine = msg.from === myPlayerIndex;
 
   const div = document.createElement('div');
-  div.className = 'chat-msg' + (isMine ? ' mine' : '');
 
-  div.innerHTML = `
-    <div class="chat-msg-author" style="color:${isMine ? '#e94560' : '#6b9dc8'}">${player ? playerDot(msg.from) + ' ' + player.name : 'Unknown'}</div>
-    <div class="chat-msg-text">${escapeHtml(msg.text)}</div>
-  `;
+  if(msg.system) {
+    div.className = 'chat-msg system';
+    div.innerHTML = `<div class="chat-msg-text" style="color:#f5a623;font-style:italic;text-align:center;font-size:0.85em">${escapeHtml(msg.text)}</div>`;
+  } else {
+    div.className = 'chat-msg' + (isMine ? ' mine' : '');
+    div.innerHTML = `
+      <div class="chat-msg-author" style="color:${isMine ? '#e94560' : '#6b9dc8'}">${player ? playerDot(msg.from) + ' ' + player.name : 'Unknown'}</div>
+      <div class="chat-msg-text">${escapeHtml(msg.text)}</div>
+    `;
+  }
 
   body.appendChild(div);
   scrollChatToBottom();
@@ -3763,12 +3771,13 @@ function initiateVotekick(targetIdx) {
     targetIdx,
     initiatorIdx: myPlayerIndex,
     votes: {},
-    needed: Math.ceil((alivePlayers.length - 1) / 2), // majority of non-target players
+    needed: alivePlayers.length - 1, // everyone except the target must vote yes
   };
   vk.votes[myPlayerIndex] = true; // initiator auto-votes yes
 
   if(isHost) {
     activeVotekick = vk;
+    broadcastSystemChat(`⚠️ ${gameState.players[myPlayerIndex].name} started a vote to kick ${target.name}! Everyone must vote.`);
     wsSend({ type:'votekick', vote: vk });
     showVotekickModal();
     checkVotekickResult();
@@ -3854,6 +3863,7 @@ function checkVotekickResult() {
     // Kick passes!
     const target = gameState.players[vk.targetIdx];
     addLog(`🚫 ${target.emoji} ${target.name} was voted out!`);
+    broadcastSystemChat(`🚫 ${target.name} was kicked from the game!`);
     doBankrupt(vk.targetIdx, -1); // properties go back to Yahu
     activeVotekick = null;
     closeVotekickModal();
@@ -3868,11 +3878,18 @@ function checkVotekickResult() {
       // Vote fails
       const target = gameState.players[vk.targetIdx];
       addLog(`✅ ${target.emoji} ${target.name} survived the vote!`);
+      broadcastSystemChat(`✅ ${target.name} survived the vote!`);
       activeVotekick = null;
       closeVotekickModal();
       wsSend({ type:'votekickResult', result: 'survived', targetIdx: vk.targetIdx });
     }
   }
+}
+
+function broadcastSystemChat(text) {
+  const msg = { from: -1, text, ts: Date.now(), system: true };
+  receiveChatMessage(msg);
+  if(isHost) wsSend({ type:'chat', msg });
 }
 
 function closeVotekickModal() {
