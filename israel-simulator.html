@@ -383,17 +383,12 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 #top-bar {
   position: absolute; top: 0; left: 0; right: 0; height: 52px;
   background: linear-gradient(135deg, rgba(14,12,28,0.97) 0%, rgba(10,16,30,0.97) 100%);
-  display: flex; align-items: center; justify-content: space-between; padding: 0 20px;
+  display: flex; align-items: center; justify-content: center; padding: 0 20px;
   box-shadow: 0 2px 20px rgba(0,0,0,0.4), 0 1px 0 rgba(233,69,96,0.1);
   z-index: 20; backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(233,69,96,0.08);
 }
-#top-bar .game-title {
-  font-family: 'Orbitron', sans-serif; font-size: 1.1em; font-weight: 900; letter-spacing: 2px;
-  background: linear-gradient(135deg, #e94560 0%, #ff6b81 100%);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-}
-#top-bar .turn-info { color: #8a8ab0; font-size: 0.9em; font-weight: 500; }
+#top-bar .turn-info { color: #d0d0e8; font-size: 1em; font-weight: 600; letter-spacing: 0.5px; }
 
 #players-panel {
   position: absolute; top: 55px; left: 10px; width: 210px; z-index: 15;
@@ -624,51 +619,52 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 .log-entry:last-child { color: rgba(190,190,220,0.75); }
 
 /* ============ TRADE BOX + LOG ============ */
+/* ============ RIGHT SIDEBAR ============ */
+#right-sidebar {
+  position: absolute; top: 58px; right: 10px; width: 230px; z-index: 15;
+  display: flex; flex-direction: column; gap: 8px;
+  max-height: calc(100vh - 70px); overflow-y: auto;
+}
+#right-sidebar::-webkit-scrollbar { width: 4px; }
+#right-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
 #trade-box {
-  position: absolute; top: 58px; right: 10px; width: 220px; z-index: 15;
+  width: 100%;
   display: flex; flex-direction: column; gap: 0;
   background: linear-gradient(135deg, rgba(16,20,35,0.92) 0%, rgba(12,14,28,0.92) 100%);
   border: 1px solid rgba(255,255,255,0.05);
   border-radius: 14px; backdrop-filter: blur(12px); box-shadow: 0 4px 20px rgba(0,0,0,0.35);
   overflow: hidden;
 }
-.trade-box-btn {
-  width: 100%; border-radius: 0 !important; padding: 12px 16px !important;
-  font-size: 14px !important; border-bottom: 1px solid rgba(255,255,255,0.06);
-}
-.bankruptcy-btn {
-  font-size: 12px !important; padding: 8px 16px !important;
-  opacity: 0.7; transition: opacity 0.2s;
-}
-.bankruptcy-btn:hover { opacity: 1; }
-#trade-log-header {
+.trade-box-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 14px; border-bottom: 1px solid rgba(255,255,255,0.06);
-  cursor: pointer; user-select: none;
+  padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.06);
 }
-#trade-log-header h4 { color: #f5a623; font-size: 0.85em; margin: 0; }
-.trade-log-badge {
-  background: #f5a623; color: #1a1a2e; font-size: 0.65em; font-weight: 700;
-  padding: 2px 7px; border-radius: 10px; display: none;
+.trade-box-header h4 { color: #f5a623; font-size: 0.85em; margin: 0; font-family: 'Orbitron', sans-serif; letter-spacing: 1px; }
+.trade-inline-btn {
+  padding: 4px 12px !important; font-size: 0.75em !important; border-radius: 8px !important;
 }
-.trade-log-badge.show { display: inline-block; animation: bounceIn 0.3s ease; }
-.trade-log-toggle { color: #555; font-size: 0.8em; transition: transform 0.2s; }
-#trade-box.log-collapsed .trade-log-toggle { transform: rotate(180deg); }
-#trade-box.log-collapsed .trade-log-body { display: none; }
+.bankruptcy-btn-sidebar {
+  width: 100%; border-radius: 10px !important; padding: 8px 16px !important;
+  font-size: 12px !important; opacity: 0.5; transition: opacity 0.2s;
+}
+.bankruptcy-btn-sidebar:hover { opacity: 1; }
 
 .trade-log-body {
-  max-height: 200px; overflow-y: auto; padding: 0;
+  min-height: 40px; max-height: 250px; overflow-y: auto; padding: 0;
 }
+.trade-log-body::-webkit-scrollbar { width: 4px; }
+.trade-log-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
 .trade-log-entry {
   padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.04);
   font-size: 0.8em; cursor: pointer; transition: background 0.15s;
-  animation: fadeSlideUp 0.2s ease;
+  animation: fadeSlideUp 0.2s ease; position: relative;
 }
 .trade-log-entry:hover { background: rgba(255,255,255,0.06); }
 .trade-log-entry .tle-header {
   display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;
 }
-.trade-log-entry .tle-players { color: #c0c0d0; font-weight: 600; }
+.trade-log-entry .tle-players { color: #c0c0d0; font-weight: 600; font-size: 0.85em; }
 .trade-log-entry .tle-status { font-size: 0.85em; font-weight: 600; }
 .trade-log-entry .tle-status.pending { color: #f5a623; }
 .trade-log-entry .tle-status.accepted { color: #27ae60; }
@@ -676,15 +672,15 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 .trade-log-entry .tle-details { color: #888; font-size: 0.9em; }
 .trade-log-entry .tle-dismiss {
   background: none; border: none; color: #555; font-size: 0.8em;
-  cursor: pointer; padding: 2px 6px; border-radius: 4px; float: right;
+  cursor: pointer; padding: 2px 6px; border-radius: 4px; position: absolute; top: 6px; right: 6px;
   transition: all 0.15s;
 }
 .trade-log-entry .tle-dismiss:hover { color: #e94560; background: rgba(233,69,96,0.1); }
-.trade-log-empty { color: #555; font-size: 0.8em; font-style: italic; padding: 10px 12px; text-align: center; }
+.trade-log-empty { color: #555; font-size: 0.8em; font-style: italic; padding: 14px 12px; text-align: center; }
 
 /* ============ MY PROPERTIES PANEL ============ */
 #my-props-panel {
-  position: absolute; top: 150px; right: 10px; width: 220px; z-index: 14;
+  width: 100%;
   background: linear-gradient(135deg, rgba(16,20,35,0.92) 0%, rgba(12,14,28,0.92) 100%);
   border: 1px solid rgba(255,255,255,0.05);
   border-radius: 14px; backdrop-filter: blur(12px); box-shadow: 0 4px 20px rgba(0,0,0,0.35);
@@ -1068,6 +1064,7 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   #action-panel { min-width: 200px; max-width: 260px; padding: 8px 12px; }
   #players-panel { width: 180px; }
   #chat-panel { width: 200px; }
+  #right-sidebar { width: 200px; }
 }
 @media(max-height:750px) {
   #board-container { transform: translate(-50%,-50%) scale(0.58); }
@@ -1235,11 +1232,7 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   </div>
 
   <div id="top-bar">
-    <div class="game-title">ISRAEL SIMULATOR</div>
     <div class="turn-info" id="turn-info">Waiting...</div>
-    <div style="display:flex;gap:10px;align-items:center">
-      <span id="cookie-icon"><img class="cookie-img cookie-img-lg" src="" alt="🍪"></span>
-    </div>
   </div>
 
   <div id="players-panel"></div>
@@ -1267,26 +1260,27 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   </div>
 
   <!-- Trade button + Bankruptcy + Trade Log -->
-  <div id="trade-box">
-    <button class="action-btn btn-auction trade-box-btn" onclick="openTradeModal()">🤝 Trade</button>
-    <button class="action-btn btn-pay trade-box-btn bankruptcy-btn" onclick="confirmGiveUp()">💀 Bankruptcy</button>
-    <div id="trade-log-header" onclick="toggleTradeLog()" style="display:none">
-      <h4>📋 Trade Log</h4>
-      <div style="display:flex;align-items:center;gap:6px">
-        <span class="trade-log-badge" id="trade-log-badge">0</span>
-        <span class="trade-log-toggle">▼</span>
+  <!-- Right sidebar -->
+  <div id="right-sidebar">
+    <div id="trade-box">
+      <div class="trade-box-header">
+        <h4>📋 Trade Log</h4>
+        <div style="display:flex;gap:6px">
+          <button class="action-btn btn-auction trade-inline-btn" onclick="openTradeModal()">🤝 Trade</button>
+        </div>
+      </div>
+      <div id="trade-log-body" class="trade-log-body">
+        <div class="trade-log-empty">No trades yet</div>
       </div>
     </div>
-    <div id="trade-log-body" class="trade-log-body"></div>
-  </div>
-
-  <!-- My Properties Panel -->
-  <div id="my-props-panel">
-    <div class="mp-header" onclick="toggleMyProps()">
-      <h4>🏠 My Properties</h4>
-      <span class="mp-toggle">▼</span>
+    <div id="my-props-panel">
+      <div class="mp-header" onclick="toggleMyProps()">
+        <h4>🏠 My Properties</h4>
+        <span class="mp-toggle">▼</span>
+      </div>
+      <div class="mp-body" id="my-props-body"></div>
     </div>
-    <div class="mp-body" id="my-props-body"></div>
+    <button class="action-btn btn-pay bankruptcy-btn-sidebar" onclick="confirmGiveUp()">💀 Give Up</button>
   </div>
 
   <div id="chat-panel">
@@ -1934,6 +1928,11 @@ function handleGuestMessage(data) {
     if(data.trade.to === myPlayerIndex) {
       showIncomingTrade(data.trade);
     }
+  }
+  if(data.type === 'tradeDeclined') {
+    // Close trade modal and update log for all players
+    updateTradeLogStatus({ from: data.from, to: data.to }, 'declined');
+    closeTradeModal();
   }
   if(data.type === 'chat') {
     // Guest receives chat relayed from host (avoid duplicating own messages)
@@ -3143,8 +3142,9 @@ function doCard(pi, deck, deckType) {
     card = deck[Math.floor(Math.random() * deck.length)];
   }
   const displayText = cookieText(card.text);
+  const plainText = card.text.replace(/\{C\}/g, '🍪');
   addLog(`🃏 ${p.emoji} ${p.name}: "${displayText}"`);
-  gameState.message = displayText;
+  gameState.message = plainText;
 
   // Show the card to all players and broadcast immediately so everyone sees it
   gameState.cardDisplay = { playerName: p.name, playerEmoji: p.emoji, cardText: displayText, deckType: deckType };
@@ -4062,17 +4062,13 @@ function addTradeToLog(trade, status) {
 }
 
 function renderTradeLog() {
-  const header = document.getElementById('trade-log-header');
   const body = document.getElementById('trade-log-body');
-  if(!header || !body || !gameState) return;
+  if(!body || !gameState) return;
 
   if(tradeLog.length === 0) {
-    header.style.display = 'none';
-    body.innerHTML = '';
+    body.innerHTML = '<div class="trade-log-empty">No trades yet</div>';
     return;
   }
-
-  header.style.display = 'flex';
 
   body.innerHTML = tradeLog.map(entry => {
     const fromP = gameState.players[entry.from];
@@ -4082,15 +4078,17 @@ function renderTradeLog() {
     const statusClass = entry.status;
     const statusText = entry.status === 'pending' ? '⏳ Pending' : entry.status === 'accepted' ? '✅ Accepted' : '❌ Declined';
 
+    const fromDot = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${fromP.emoji};border:1px solid rgba(255,255,255,0.4)"></span>`;
+    const toDot = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${toP.emoji};border:1px solid rgba(255,255,255,0.4)"></span>`;
     let details = [];
-    if(entry.offerMoney > 0) details.push(`${fromP.emoji} offers ${entry.offerMoney}🍪`);
-    if(entry.requestMoney > 0) details.push(`${fromP.emoji} wants ${entry.requestMoney}🍪`);
-    entry.offerProps.forEach(idx => details.push(`${fromP.emoji} offers ${BOARD[idx]?.name || '?'}`));
-    entry.requestProps.forEach(idx => details.push(`${fromP.emoji} wants ${BOARD[idx]?.name || '?'}`));
+    if(entry.offerMoney > 0) details.push(`Offers ${entry.offerMoney}🍪`);
+    if(entry.requestMoney > 0) details.push(`Wants ${entry.requestMoney}🍪`);
+    entry.offerProps.forEach(idx => details.push(`Offers ${BOARD[idx]?.name || '?'}`));
+    entry.requestProps.forEach(idx => details.push(`Wants ${BOARD[idx]?.name || '?'}`));
 
     return `<div class="trade-log-entry" onclick="showTradeLogDetail(${entry.id})">
       <div class="tle-header">
-        <span class="tle-players">${fromP.emoji} → ${toP.emoji}</span>
+        <span class="tle-players">${fromDot} ${fromP.name} → ${toDot} ${toP.name}</span>
         <span class="tle-status ${statusClass}">${statusText}</span>
       </div>
       <div class="tle-details">${details.slice(0,2).join(' · ') || 'Empty trade'}${details.length > 2 ? ' ...' : ''}</div>
@@ -4124,9 +4122,9 @@ function showTradeLogDetail(entryId) {
     <div class="trade-incoming-box" style="width:420px">
       <h3>📋 Trade Details</h3>
       <div class="trade-header">
-        <div class="th-player"><div class="th-emoji">${fromP.emoji}</div><div class="th-name">${fromP.name}</div></div>
+        <div class="th-player"><div class="th-emoji" style="width:30px;height:30px;border-radius:50%;background:${fromP.emoji};border:2px solid rgba(255,255,255,0.5);box-shadow:0 0 8px ${fromP.emoji}"></div><div class="th-name">${fromP.name}</div></div>
         <div class="th-arrow">→</div>
-        <div class="th-player"><div class="th-emoji">${toP.emoji}</div><div class="th-name">${toP.name}</div></div>
+        <div class="th-player"><div class="th-emoji" style="width:30px;height:30px;border-radius:50%;background:${toP.emoji};border:2px solid rgba(255,255,255,0.5);box-shadow:0 0 8px ${toP.emoji}"></div><div class="th-name">${toP.name}</div></div>
       </div>
       <div style="text-align:center;padding:8px"><span class="tle-status ${statusClass}" style="font-size:1.1em">${statusText}</span></div>
       <div class="trade-summary" style="display:flex;gap:0">
@@ -4186,25 +4184,23 @@ function updateTradeLogStatus(trade, status) {
     entry.status = status;
     renderTradeLog();
     updateTradeLogBadge();
+    // Auto-dismiss declined trades after a brief display
+    if(status === 'declined') {
+      setTimeout(() => {
+        tradeLog = tradeLog.filter(e => e.id !== entry.id);
+        renderTradeLog();
+        updateTradeLogBadge();
+      }, 3000);
+    }
   }
 }
 
 function toggleTradeLog() {
-  const box = document.getElementById('trade-box');
-  tradeLogCollapsed = !tradeLogCollapsed;
-  box.classList.toggle('log-collapsed', tradeLogCollapsed);
+  // Trade log is always visible now - no toggle needed
 }
 
 function updateTradeLogBadge() {
-  const badge = document.getElementById('trade-log-badge');
-  if(!badge) return;
-  const pending = tradeLog.filter(e => e.status === 'pending').length;
-  if(pending > 0) {
-    badge.textContent = pending;
-    badge.classList.add('show');
-  } else {
-    badge.classList.remove('show');
-  }
+  // Badge removed - trade log is always visible
 }
 
 // =============================================
@@ -4231,7 +4227,7 @@ function openTradeModal() {
     const propCount = gameState.properties.filter(pr => pr.owner === i).length;
     partnersHtml += `
       <button class="trade-partner-btn" onclick="selectTradePartner(${i})">
-        <span class="tp-emoji">${p.emoji}</span>
+        <span class="tp-emoji" style="display:inline-block;width:28px;height:28px;border-radius:50%;background:${p.emoji};border:2px solid rgba(255,255,255,0.5);box-shadow:0 0 8px ${p.emoji}"></span>
         <div class="tp-info">
           <div class="tp-name">${p.name}</div>
           <div class="tp-money">${p.money}🍪 · ${propCount} properties</div>
@@ -4296,9 +4292,9 @@ function renderTradeCreation() {
   modal.innerHTML = `
     <div class="trade-box">
       <div class="trade-header">
-        <div class="th-player"><div class="th-emoji">${me.emoji}</div><div class="th-name">${me.name}</div></div>
+        <div class="th-player"><div class="th-emoji" style="width:30px;height:30px;border-radius:50%;background:${me.emoji};border:2px solid rgba(255,255,255,0.5);box-shadow:0 0 8px ${me.emoji}"></div><div class="th-name">${me.name}</div></div>
         <div class="th-arrow">⇄</div>
-        <div class="th-player"><div class="th-emoji">${them.emoji}</div><div class="th-name">${them.name}</div></div>
+        <div class="th-player"><div class="th-emoji" style="width:30px;height:30px;border-radius:50%;background:${them.emoji};border:2px solid rgba(255,255,255,0.5);box-shadow:0 0 8px ${them.emoji}"></div><div class="th-name">${them.name}</div></div>
       </div>
       <div class="trade-columns">
         <div class="trade-col">
@@ -4368,7 +4364,7 @@ function sendTradeOffer() {
 
   closeTradeModal();
   addTradeToLog(offer, 'pending');
-  addLog(`${gameState.players[myPlayerIndex].emoji} ${gameState.players[myPlayerIndex].name} sent a trade offer to ${gameState.players[tradeState.partnerId].emoji} ${gameState.players[tradeState.partnerId].name}`);
+  addLog(`${gameState.players[myPlayerIndex].name} sent a trade offer to ${gameState.players[tradeState.partnerId].name}`);
   if(isHost) {
     broadcastState();
     renderGame();
@@ -4411,11 +4407,11 @@ function showIncomingTrade(offer) {
 
   modal.innerHTML = `
     <div class="trade-incoming-box">
-      <h3>${from.emoji} ${from.name} wants to trade!</h3>
+      <h3>${from.name} wants to trade!</h3>
       <div class="trade-header">
-        <div class="th-player"><div class="th-emoji">${from.emoji}</div><div class="th-name">${from.name} offers</div></div>
+        <div class="th-player"><div class="th-emoji" style="width:30px;height:30px;border-radius:50%;background:${from.emoji};border:2px solid rgba(255,255,255,0.5);box-shadow:0 0 8px ${from.emoji}"></div><div class="th-name">${from.name} offers</div></div>
         <div class="th-arrow">→</div>
-        <div class="th-player"><div class="th-emoji">${to.emoji}</div><div class="th-name">${to.name} receives</div></div>
+        <div class="th-player"><div class="th-emoji" style="width:30px;height:30px;border-radius:50%;background:${to.emoji};border:2px solid rgba(255,255,255,0.5);box-shadow:0 0 8px ${to.emoji}"></div><div class="th-name">${to.name} receives</div></div>
       </div>
       <div class="trade-summary" style="display:flex;gap:0">
         <div style="flex:1;padding:12px;border-right:1px solid #2a3a4a">
@@ -4510,12 +4506,14 @@ function handleTradeResponse(response) {
       from.properties.push(idx);
     });
 
-    addLog(`✅ Trade completed between ${from.emoji} ${from.name} and ${to.emoji} ${to.name}!`);
+    addLog(`✅ Trade completed between ${from.name} and ${to.name}!`);
     // Update trade log - find pending trade matching this one and mark accepted
     updateTradeLogStatus(trade, 'accepted');
   } else {
-    addLog(`❌ ${to.emoji} ${to.name} declined the trade from ${from.emoji} ${from.name}`);
+    addLog(`❌ ${to.name} declined the trade from ${from.name}`);
     updateTradeLogStatus(trade, 'declined');
+    // Broadcast decline to all guests so their trade modals close and logs update
+    wsSend({ type:'tradeDeclined', from: trade.from, to: trade.to });
   }
 
   gameState.pendingTrade = null;
