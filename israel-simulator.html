@@ -2763,7 +2763,13 @@ function renderTurnInfo() {
 // =============================================
 // ACTIONS
 // =============================================
+let _actionLock = false;
 function sendAction(action, payload) {
+  // Prevent double-clicks from firing duplicate actions
+  if(_actionLock) return;
+  _actionLock = true;
+  setTimeout(() => { _actionLock = false; }, 100);
+
   if(isHost) {
     handlePlayerAction(myPlayerIndex, action, payload);
   } else {
@@ -2816,6 +2822,12 @@ function handlePlayerAction(playerIdx, action, payload) {
 
   const p = gameState.players[playerIdx];
   if(p.bankrupt) return;
+
+  // Block actions while dice are animating
+  if(gameState.phase === 'rolling') return;
+
+  // Block rolls unless in roll phase, block most actions unless in postRoll
+  if((action === 'roll' || action === 'rollJail') && gameState.phase !== 'roll') return;
 
   switch(action) {
     case 'roll': doRoll(playerIdx); return; // doRoll handles its own broadcastState/renderGame after animation
