@@ -64,6 +64,25 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 .btn-create:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(233,69,96,0.5); }
 .btn-join { background: linear-gradient(135deg, #533483 0%, #3d2363 100%); color: #fff; box-shadow: 0 4px 20px rgba(83,52,131,0.3); }
 .btn-join:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(83,52,131,0.5); }
+.btn-passplay { background: linear-gradient(135deg, #27ae60 0%, #1e8449 100%); color: #fff; box-shadow: 0 4px 20px rgba(39,174,96,0.3); }
+.btn-passplay:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(39,174,96,0.5); }
+.pnp-player-row { display:flex; align-items:center; gap:8px; padding:6px 10px; background:rgba(255,255,255,0.04); border-radius:8px; margin-bottom:4px; }
+.pnp-player-row .pnp-dot { width:14px; height:14px; border-radius:50%; border:2px solid rgba(255,255,255,0.4); flex-shrink:0; }
+.pnp-player-row .pnp-pname { flex:1; color:#d0d0e0; font-size:0.9em; font-weight:600; }
+.pnp-player-row .pnp-remove { background:none; border:none; color:#e94560; cursor:pointer; font-size:1em; padding:2px 6px; border-radius:4px; }
+.pnp-player-row .pnp-remove:hover { background:rgba(233,69,96,0.15); }
+.pnp-player-row .pnp-bot-tag { font-size:0.7em; color:#888; margin-left:4px; }
+#pass-device-overlay {
+  display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:1000;
+  background:rgba(5,5,15,0.95); backdrop-filter:blur(12px);
+  flex-direction:column; align-items:center; justify-content:center; gap:20px;
+}
+#pass-device-overlay.visible { display:flex; }
+#pass-device-overlay .pass-title { font-family:'Orbitron',sans-serif; font-size:1.4em; font-weight:700; color:#e94560; letter-spacing:2px; }
+#pass-device-overlay .pass-name { font-family:'Rajdhani',sans-serif; font-size:2em; font-weight:700; color:#fff; }
+#pass-device-overlay .pass-hint { font-size:0.85em; color:rgba(255,255,255,0.4); }
+#pass-device-overlay .pass-btn { padding:14px 40px; border:none; border-radius:12px; font-family:'Rajdhani',sans-serif; font-size:1.1em; font-weight:700; cursor:pointer; letter-spacing:1px; background:linear-gradient(135deg,#e94560,#c0392b); color:#fff; box-shadow:0 4px 20px rgba(233,69,96,0.3); transition:all 0.2s; }
+#pass-device-overlay .pass-btn:hover { transform:translateY(-2px); box-shadow:0 6px 28px rgba(233,69,96,0.5); }
 .room-code-display {
   font-size: 2em; font-weight: bold; color: #e94560; background: rgba(233,69,96,0.1);
   padding: 10px 20px; border-radius: 8px; margin: 10px 0; letter-spacing: 4px;
@@ -86,7 +105,7 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 
 /* ============ GAME CONTAINER ============ */
 #game {
-  display: none; height: 100vh; width: 100vw; position: relative; opacity: 0;
+  display: none; height: 100vh; width: 100vw; position: relative;
   background: radial-gradient(ellipse at 50% 50%, #12122a 0%, #0a0a1a 60%, #050510 100%);
 }
 #game::before {
@@ -131,8 +150,9 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 
 /* ============ BOARD ============ */
 #board-container {
-  position: absolute; top: calc(50% + 20px); left: 50%; transform: translate(-50%, -50%) scale(0.92);
+  position: absolute; top: calc(50% + 25px); left: 50%; transform: translate(-50%, -50%) scale(0.7);
   width: 1020px; height: 1020px; z-index: 1;
+  transform-origin: center center;
 }
 #board {
   width: 1020px; height: 1020px; position: relative;
@@ -348,10 +368,10 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 
 /* Player tokens on board — colored circles */
 .token-on-board {
-  position: absolute; z-index: 10; width: 26px; height: 26px; border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.85);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.6), 0 0 14px var(--token-color, #e94560);
-  transition: left 0.6s cubic-bezier(0.34,1.56,0.64,1), top 0.6s cubic-bezier(0.34,1.56,0.64,1);
+  position: absolute; z-index: 10; width: 36px; height: 36px; border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.85);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.6), 0 0 18px var(--token-color, #e94560);
+  transition: left 0.25s ease-out, top 0.25s ease-out;
   pointer-events: none;
   background: var(--token-color, #e94560);
   /* Glossy effect */
@@ -1159,13 +1179,26 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       <label style="color:#a0a0c0;font-size:0.9em">Choose Your Color</label>
       <div class="emoji-picker" id="emoji-picker"></div>
     </div>
-    <div style="display:flex;gap:10px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
       <button class="lobby-btn btn-create" onclick="createRoom()">Create Room</button>
       <button class="lobby-btn btn-join" onclick="showJoin()">Join Room</button>
+      <button class="lobby-btn btn-passplay" onclick="showPassAndPlay()">Pass & Play</button>
     </div>
     <div id="join-section" style="display:none;margin-top:15px">
       <input class="lobby-input" id="inp-room" placeholder="Enter Room Code..." maxlength="10" style="text-transform:uppercase;letter-spacing:2px;text-align:center">
       <button class="lobby-btn btn-join" onclick="joinRoom()">Connect</button>
+    </div>
+    <div id="passplay-section" style="display:none;margin-top:15px">
+      <div id="pnp-players"></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <input class="lobby-input" id="inp-pnp-name" placeholder="Player name..." maxlength="16" style="flex:1;min-width:0;width:auto;margin-bottom:0" onkeydown="if(event.key==='Enter')addPnpPlayer()">
+        <button class="lobby-btn btn-create" onclick="addPnpPlayer()" style="white-space:nowrap;padding:8px 16px;width:auto;flex-shrink:0">+ Add</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="lobby-btn btn-create" onclick="addPnpBot()">🤖 Add Bot</button>
+        <button class="lobby-btn btn-join" id="btn-pnp-start" onclick="startPassAndPlay()" disabled>▶ Start Game</button>
+      </div>
+      <div style="margin-top:6px;font-size:0.75em;color:#666" id="pnp-status">Add at least 2 players to start</div>
     </div>
     <div id="lobby-status" style="margin-top:10px"></div>
   </div>
@@ -1572,6 +1605,126 @@ function startLocalWaiting() {
 
 function showJoin() {
   document.getElementById('join-section').style.display = 'block';
+  document.getElementById('passplay-section').style.display = 'none';
+}
+
+// =============================================
+// PASS & PLAY MODE
+// =============================================
+let isPassAndPlay = false;
+let pnpPlayers = []; // {name, color, isBot}
+let pnpColorIdx = 0;
+
+function showPassAndPlay() {
+  document.getElementById('passplay-section').style.display = 'block';
+  document.getElementById('join-section').style.display = 'none';
+  pnpPlayers = [];
+  pnpColorIdx = 0;
+  // Auto-add first player from the name input
+  const name = document.getElementById('inp-name').value.trim();
+  if(name) {
+    pnpPlayers.push({ name, color: PLAYER_COLORS[pnpColorIdx++], isBot: false });
+  }
+  renderPnpPlayers();
+}
+
+function addPnpPlayer() {
+  const inp = document.getElementById('inp-pnp-name');
+  const name = inp.value.trim();
+  if(!name || pnpPlayers.length >= 10) return;
+  pnpPlayers.push({ name, color: PLAYER_COLORS[pnpColorIdx++ % PLAYER_COLORS.length], isBot: false });
+  inp.value = '';
+  inp.focus();
+  renderPnpPlayers();
+}
+
+function addPnpBot() {
+  if(pnpPlayers.length >= 10) return;
+  const botNames = ['Yahu Jr.', 'Cookie Monster', 'BART Bot', 'Golden Bot', 'Monkey Bot', 'Tax Man', 'Settler Bot', 'Dice Lord'];
+  const botCount = pnpPlayers.filter(p => p.isBot).length;
+  const name = botNames[botCount % botNames.length];
+  pnpPlayers.push({ name, color: PLAYER_COLORS[pnpColorIdx++ % PLAYER_COLORS.length], isBot: true });
+  renderPnpPlayers();
+}
+
+function removePnpPlayer(idx) {
+  pnpPlayers.splice(idx, 1);
+  renderPnpPlayers();
+}
+
+function renderPnpPlayers() {
+  const el = document.getElementById('pnp-players');
+  el.innerHTML = pnpPlayers.map((p, i) =>
+    `<div class="pnp-player-row">
+      <div class="pnp-dot" style="background:${p.color}"></div>
+      <span class="pnp-pname">${p.name}${p.isBot ? '<span class="pnp-bot-tag">🤖 BOT</span>' : ''}</span>
+      <button class="pnp-remove" onclick="removePnpPlayer(${i})">✕</button>
+    </div>`
+  ).join('');
+  const btn = document.getElementById('btn-pnp-start');
+  const status = document.getElementById('pnp-status');
+  if(pnpPlayers.length >= 2) {
+    btn.disabled = false;
+    status.textContent = `${pnpPlayers.length} players ready!`;
+  } else {
+    btn.disabled = true;
+    status.textContent = 'Add at least 2 players to start';
+  }
+}
+
+function startPassAndPlay() {
+  if(pnpPlayers.length < 2) return;
+  isHost = true;
+  isPassAndPlay = true;
+  roomCode = 'PNP';
+  gameState = createInitialState();
+
+  pnpPlayers.forEach(p => {
+    const idx = addPlayerToState(p.name, p.color);
+    if(p.isBot) gameState.players[idx].isBot = true;
+  });
+
+  myPlayerIndex = 0;
+  gameState.phase = 'roll';
+  gameState.currentPlayer = 0;
+  gameState.message = `${gameState.players[0].name}'s turn - Roll the dice!`;
+  addLog(`Pass & Play game started with ${pnpPlayers.length} players!`);
+
+  // Hide lobby, show game
+  document.getElementById('lobby').style.display = 'none';
+  const game = document.getElementById('game');
+  game.style.display = 'flex';
+  document.getElementById('waiting-overlay').style.display = 'none';
+  document.getElementById('room-code-banner').style.display = 'none';
+
+  buildBoard();
+  renderGame();
+  game.style.opacity = '0';
+  game.style.transition = 'opacity 0.5s ease';
+  setTimeout(() => { game.style.opacity = '1'; }, 50);
+
+  // Show pass screen for first player if they're not a bot
+  if(!gameState.players[0].isBot) {
+    showPassScreen(0);
+  }
+}
+
+function showPassScreen(playerIdx) {
+  if(!isPassAndPlay) return;
+  const p = gameState.players[playerIdx];
+  if(p.isBot) return;
+  const overlay = document.getElementById('pass-device-overlay');
+  document.getElementById('pass-player-name').textContent = p.name + "'s Turn";
+  document.getElementById('pass-player-dot').style.background = p.emoji;
+  document.getElementById('pass-player-dot').style.boxShadow = `0 0 20px ${p.emoji}`;
+  overlay.classList.add('visible');
+  // In PnP, set myPlayerIndex to the current player so they can interact
+  myPlayerIndex = playerIdx;
+}
+
+function dismissPassScreen() {
+  document.getElementById('pass-device-overlay').classList.remove('visible');
+  renderGame();
 }
 
 // GUEST: Join Room
@@ -1896,6 +2049,17 @@ function showGameScreen() {
 // =============================================
 // BOARD RENDERING
 // =============================================
+function resizeBoard() {
+  const container = document.getElementById('board-container');
+  if(!container) return;
+  const maxH = window.innerHeight - 80;
+  const maxW = window.innerWidth - 460;
+  const scale = Math.min(maxH, maxW) / 1020;
+  const clampedScale = Math.max(0.45, Math.min(1.3, scale));
+  container.style.transform = `translate(-50%, -50%) scale(${clampedScale})`;
+}
+window.addEventListener('resize', resizeBoard);
+
 function buildBoard() {
   const board = document.getElementById('board');
   board.innerHTML = '';
@@ -1966,8 +2130,8 @@ function buildBoard() {
     const imgSrc = imgKey && typeof CELL_IMAGES !== 'undefined' ? CELL_IMAGES[imgKey] : null;
 
     // Decide: background (photos/scenes) vs emblem (logos)
-    const BG_IMAGES = ['goldenhills','pool','jackpot','goldenscar','yahutax','thefields','heatherfarms','kenya','oaklandtemple','rudgear','sorenshouse','colebouyeas','palmerrd','pokemonvm','shibuya','moriohstation','sandiego','gokugo','theuncle','johnnysgarage'];
-    const LOGO_IMAGES = ['innout','chickfila','bart','fitness','slavery','israel','cagedmonkey','brutal','boostercookie'];
+    const BG_IMAGES = ['goldenhills','pool','jackpot','goldenscar','yahutax','thefields','heatherfarms','kenya','oaklandtemple','rudgear','sorenshouse','colebouyeas','palmerrd','pokemonvm','shibuya','moriohstation','sandiego','gokugo','theuncle','johnnysgarage','slavery'];
+    const LOGO_IMAGES = ['innout','chickfila','bart','fitness','israel','cagedmonkey','brutal','boostercookie'];
     const useBg = imgSrc && BG_IMAGES.includes(imgKey);
     const useLogo = imgSrc && LOGO_IMAGES.includes(imgKey);
 
@@ -2005,13 +2169,20 @@ function buildBoard() {
       if(cell.cornerSub) div.innerHTML += `<div class="corner-sub">${cell.cornerSub}</div>`;
     } else if(useBg) {
       // Full background image for photos/scenes
-      div.style.backgroundImage = `url(${imgSrc})`;
-      div.style.backgroundSize = 'cover';
-      // For portrait images in horizontal cells, focus on top/face area
-      div.style.backgroundPosition = (imgKey === 'yahutax') ? 'center 15%' : 'center';
-      div.classList.add('has-bg-img');
-      div.innerHTML += `<div class="cell-name">${cell.name}</div>`;
-      if(cell.price && !hasBar) div.innerHTML += `<div class="cell-price">${cell.price}${COOKIE_ICON}</div>`;
+      if(imgKey === 'slavery') {
+        // Slavery: remove white bg with blend mode, use img element
+        div.classList.add('has-bg-img');
+        div.innerHTML += `<div style="position:absolute;top:0;left:0;width:100%;height:100%;background:url(${imgSrc}) center 20%/cover no-repeat;filter:invert(1) hue-rotate(180deg) brightness(0.85);pointer-events:none;"></div>`;
+        div.innerHTML += `<div class="cell-name">${cell.name}</div>`;
+      } else {
+        div.style.backgroundImage = `url(${imgSrc})`;
+        div.style.backgroundSize = 'cover';
+        // For portrait images in horizontal cells, focus on top/face area
+        div.style.backgroundPosition = (imgKey === 'yahutax') ? 'center 15%' : 'center';
+        div.classList.add('has-bg-img');
+        div.innerHTML += `<div class="cell-name">${cell.name}</div>`;
+        if(cell.price && !hasBar) div.innerHTML += `<div class="cell-price">${cell.price}${COOKIE_ICON}</div>`;
+      }
     } else if(useLogo) {
       // Emblem/logo image — consistent layout
       div.classList.add('has-emblem');
@@ -2052,6 +2223,7 @@ function buildBoard() {
     </div>
   `;
   board.appendChild(center);
+  resizeBoard();
 }
 
 function getCellCenter(index) {
@@ -2240,51 +2412,89 @@ function renderTokens() {
 
   const usedTokens = new Set();
 
-  // Group players by position
-  const posMap = {};
+  // Count players at each final position for offset stacking
+  const posCount = {};
   gameState.players.forEach((p, i) => {
     if(p.bankrupt) return;
-    if(!posMap[p.position]) posMap[p.position] = [];
-    posMap[p.position].push(i);
+    if(!posCount[p.position]) posCount[p.position] = [];
+    posCount[p.position].push(i);
   });
 
-  Object.entries(posMap).forEach(([pos, indices]) => {
-    const center = getCellCenter(parseInt(pos));
-    indices.forEach((pi, offset) => {
-      const ox = (offset % 3) * 20 - 10;
-      const oy = Math.floor(offset / 3) * 20 - 10;
-      const left = (center.x + ox - 14);
-      const top = (center.y + oy - 14);
+  gameState.players.forEach((p, pi) => {
+    if(p.bankrupt) return;
+    const offsetIdx = posCount[p.position].indexOf(pi);
+    const ox = (offsetIdx % 3) * 22 - 11;
+    const oy = Math.floor(offsetIdx / 3) * 22 - 11;
 
-      let token = existingTokens[pi];
-      if(token) {
-        // Detect if position changed for landing animation
-        const oldLeft = parseInt(token.style.left);
-        const oldTop = parseInt(token.style.top);
-        const moved = Math.abs(oldLeft - left) > 2 || Math.abs(oldTop - top) > 2;
-        token.style.left = left + 'px';
-        token.style.top = top + 'px';
-        // Add/remove current player glow
-        token.classList.toggle('current-player', pi === gameState.currentPlayer);
-        if(moved) {
-          token.classList.remove('token-moving');
-          void token.offsetWidth; // force reflow
-          token.classList.add('token-moving');
+    function posToCoords(cellPos) {
+      const center = getCellCenter(cellPos);
+      return { left: center.x + ox - 21, top: center.y + oy - 21 };
+    }
+
+    let token = existingTokens[pi];
+    if(token) {
+      const oldCellPos = parseInt(token.dataset.cellPos || '0');
+      const newCellPos = p.position;
+      token.classList.toggle('current-player', pi === gameState.currentPlayer);
+
+      if(oldCellPos !== newCellPos && !token._stepping) {
+        // Step through each cell one at a time
+        let steps = [];
+        const diff = (newCellPos - oldCellPos + 40) % 40;
+        const backDiff = (oldCellPos - newCellPos + 40) % 40;
+        if(backDiff <= 6 && backDiff < diff) {
+          // Moving backwards (e.g. "Go back 3 spaces")
+          for(let i = 1; i <= backDiff; i++) steps.push((oldCellPos - i + 40) % 40);
+        } else {
+          // Moving forward (normal roll or card), possibly wrapping past GO
+          for(let i = 1; i <= diff; i++) steps.push((oldCellPos + i) % 40);
         }
-        usedTokens.add(String(pi));
-      } else {
-        token = document.createElement('div');
-        token.className = 'token-on-board' + (pi === gameState.currentPlayer ? ' current-player' : '');
-        token.dataset.playerIdx = pi;
-        const pColor = PLAYER_COLORS[pi] || '#888';
-        token.style.background = pColor;
-        token.style.setProperty('--token-color', pColor);
-        token.style.left = left + 'px';
-        token.style.top = top + 'px';
-        board.appendChild(token);
-        usedTokens.add(String(pi));
+
+        if(steps.length > 0 && steps.length <= 14) {
+          token._stepping = true;
+          const STEP_DELAY = 150;
+          steps.forEach((cellIdx, i) => {
+            setTimeout(() => {
+              const coords = posToCoords(cellIdx);
+              token.style.left = coords.left + 'px';
+              token.style.top = coords.top + 'px';
+              token.dataset.cellPos = cellIdx;
+              if(i === steps.length - 1) {
+                token._stepping = false;
+                token.classList.remove('token-moving');
+                void token.offsetWidth;
+                token.classList.add('token-moving');
+              }
+            }, i * STEP_DELAY);
+          });
+        } else {
+          // Fallback: direct move (e.g. sent to jail)
+          const coords = posToCoords(newCellPos);
+          token.style.left = coords.left + 'px';
+          token.style.top = coords.top + 'px';
+          token.dataset.cellPos = newCellPos;
+        }
+      } else if(!token._stepping) {
+        // Position didn't change, just update coords (for stacking offset changes)
+        const coords = posToCoords(p.position);
+        token.style.left = coords.left + 'px';
+        token.style.top = coords.top + 'px';
       }
-    });
+      usedTokens.add(String(pi));
+    } else {
+      token = document.createElement('div');
+      token.className = 'token-on-board' + (pi === gameState.currentPlayer ? ' current-player' : '');
+      token.dataset.playerIdx = pi;
+      token.dataset.cellPos = p.position;
+      const pColor = PLAYER_COLORS[pi] || '#888';
+      token.style.background = pColor;
+      token.style.setProperty('--token-color', pColor);
+      const coords = posToCoords(p.position);
+      token.style.left = coords.left + 'px';
+      token.style.top = coords.top + 'px';
+      board.appendChild(token);
+      usedTokens.add(String(pi));
+    }
   });
 
   // Remove tokens for bankrupt/removed players
@@ -2488,8 +2698,9 @@ function renderActionPanel() {
   } else if(gameState.phase === 'postRoll') {
     const ta = gameState.turnActions;
     if(ta.canBuy) {
-      const cell = BOARD[me.position];
-      const canAfford = me.money >= cell.price;
+      const curP = gameState.players[gameState.currentPlayer];
+      const cell = BOARD[curP.position];
+      const canAfford = curP.money >= cell.price;
       const buyBtn = addBtn(`Buy ${cell.price}${COOKIE_ICON}`, 'btn-buy', () => sendAction('buy'));
       if(!canAfford) { buyBtn.disabled = true; buyBtn.title = 'Not enough 🍪 — mortgage or trade to raise funds'; }
       addBtn('Pass', 'btn-end', () => sendAction('passBuy'));
@@ -2700,13 +2911,13 @@ function handleLanding(pi) {
           p.money -= rent;
           gameState.players[prop.owner].money += rent;
           const ownerP = gameState.players[prop.owner];
-          addLog(`${p.emoji} ${p.name} paid ${rent}${COOKIE_ICON} rent on ${cell.name} to ${ownerP.emoji} ${ownerP.name}`);
+          addLog(`${p.emoji} ${p.name} paid ${rent}🍪 rent on ${cell.name} to ${ownerP.emoji} ${ownerP.name}`);
           if(p.money < 0) {
             gameState.phase = 'postRoll';
-            gameState.message = `⚠️ In debt (${p.money}${COOKIE_ICON})! Mortgage properties or declare bankruptcy.`;
-            addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}${COOKIE_ICON}`);
+            gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
+            addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}🍪`);
           } else {
-            gameState.message = `Paid ${rent}${COOKIE_ICON} rent to ${gameState.players[prop.owner].name}`;
+            gameState.message = `Paid ${rent}🍪 rent to ${gameState.players[prop.owner].name}`;
           }
         }
       }
@@ -2715,11 +2926,11 @@ function handleLanding(pi) {
     case 'tax':
       p.money -= cell.amount;
       gameState.freeParkingPot += cell.amount;
-      addLog(`${p.emoji} ${p.name} paid ${cell.amount}${COOKIE_ICON} tax`);
+      addLog(`${p.emoji} ${p.name} paid ${cell.amount}🍪 tax`);
       if(p.money < 0) {
         gameState.phase = 'postRoll';
-        gameState.message = `⚠️ In debt (${p.money}${COOKIE_ICON})! Mortgage properties or declare bankruptcy.`;
-        addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}${COOKIE_ICON}`);
+        gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
+        addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}🍪`);
       } else {
         gameState.message = `${cell.desc}`;
       }
@@ -2848,15 +3059,15 @@ function applyCardEffect(pi, card) {
       gameState.freeParkingPot += card.value;
       if(p.money < 0) {
         gameState.phase = 'postRoll';
-        gameState.message = `⚠️ In debt (${p.money}${COOKIE_ICON})! Mortgage properties or declare bankruptcy.`;
-        addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}${COOKIE_ICON}`);
+        gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
+        addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}🍪`);
       }
       break;
     case 'moveTo':
       const oldPos = p.position;
       p.position = card.value;
-      if(card.value < oldPos || card.value === 0) { p.money += 200; addLog(`${p.emoji} passed GO! +200${COOKIE_ICON}`); }
-      if(card.bonus) { p.money += card.bonus; addLog(`${p.emoji} bonus! +${card.bonus}${COOKIE_ICON}`); }
+      if(card.value < oldPos || card.value === 0) { p.money += 200; addLog(`${p.emoji} passed GO! +200🍪`); }
+      if(card.bonus) { p.money += card.bonus; addLog(`${p.emoji} bonus! +${card.bonus}🍪`); }
       handleLanding(pi);
       return;
     case 'moveBack':
@@ -2897,8 +3108,8 @@ function applyCardEffect(pi, card) {
       gameState.freeParkingPot += houseCost;
       if(p.money < 0) {
         gameState.phase = 'postRoll';
-        gameState.message = `⚠️ In debt (${p.money}${COOKIE_ICON})! Mortgage properties or declare bankruptcy.`;
-        addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}${COOKIE_ICON}`);
+        gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
+        addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}🍪`);
       }
       break;
     }
@@ -2913,11 +3124,11 @@ function applyCardEffect(pi, card) {
       const repairCost = rHouses * card.value + rHotels * (card.hotelValue || card.value * 4);
       p.money -= repairCost;
       gameState.freeParkingPot += repairCost;
-      addLog(`🔧 ${p.emoji} ${p.name} pays ${repairCost}${COOKIE_ICON} for repairs (${rHouses} houses, ${rHotels} hotels)`);
+      addLog(`🔧 ${p.emoji} ${p.name} pays ${repairCost}🍪 for repairs (${rHouses} houses, ${rHotels} hotels)`);
       if(p.money < 0) {
         gameState.phase = 'postRoll';
-        gameState.message = `⚠️ In debt (${p.money}${COOKIE_ICON})! Mortgage properties or declare bankruptcy.`;
-        addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}${COOKIE_ICON}`);
+        gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
+        addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}🍪`);
       }
       break;
     }
@@ -2927,7 +3138,7 @@ function applyCardEffect(pi, card) {
       if(!nearest) nearest = railroads[0];
       const oldPosR = p.position;
       p.position = nearest;
-      if(nearest <= oldPosR) { p.money += 200; addLog(`${p.emoji} passed GO! +200${COOKIE_ICON}`); }
+      if(nearest <= oldPosR) { p.money += 200; addLog(`${p.emoji} passed GO! +200🍪`); }
       const rrProp = gameState.properties[nearest];
       if(rrProp.owner >= 0 && rrProp.owner !== pi && !rrProp.mortgaged) {
         const rrOwner = gameState.players[rrProp.owner];
@@ -2935,11 +3146,11 @@ function applyCardEffect(pi, card) {
         const rrRent = [25,50,100,200][rrCount - 1] * 2;
         p.money -= rrRent;
         rrOwner.money += rrRent;
-        addLog(`🚇 ${p.emoji} ${p.name} pays ${rrOwner.name} double BART fare: ${rrRent}${COOKIE_ICON}`);
+        addLog(`🚇 ${p.emoji} ${p.name} pays ${rrOwner.name} double BART fare: ${rrRent}🍪`);
         if(p.money < 0) {
           gameState.phase = 'postRoll';
-          gameState.message = `⚠️ In debt (${p.money}${COOKIE_ICON})! Mortgage properties or declare bankruptcy.`;
-          addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}${COOKIE_ICON}`);
+          gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
+          addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}🍪`);
         }
       } else if(rrProp.owner === -1) {
         gameState.turnActions.canBuy = true;
@@ -2953,7 +3164,7 @@ function applyCardEffect(pi, card) {
       if(!nearestU) nearestU = utilities[0];
       const oldPosU = p.position;
       p.position = nearestU;
-      if(nearestU <= oldPosU) { p.money += 200; addLog(`${p.emoji} passed GO! +200${COOKIE_ICON}`); }
+      if(nearestU <= oldPosU) { p.money += 200; addLog(`${p.emoji} passed GO! +200🍪`); }
       const utilProp = gameState.properties[nearestU];
       if(utilProp.owner >= 0 && utilProp.owner !== pi && !utilProp.mortgaged) {
         const utilOwner = gameState.players[utilProp.owner];
@@ -2961,11 +3172,11 @@ function applyCardEffect(pi, card) {
         const utilRent = diceRoll * 10;
         p.money -= utilRent;
         utilOwner.money += utilRent;
-        addLog(`⚡ ${p.emoji} ${p.name} rolled ${diceRoll} — pays ${utilOwner.name} ${utilRent}${COOKIE_ICON} utility bill`);
+        addLog(`⚡ ${p.emoji} ${p.name} rolled ${diceRoll} — pays ${utilOwner.name} ${utilRent}🍪 utility bill`);
         if(p.money < 0) {
           gameState.phase = 'postRoll';
-          gameState.message = `⚠️ In debt (${p.money}${COOKIE_ICON})! Mortgage properties or declare bankruptcy.`;
-          addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}${COOKIE_ICON}`);
+          gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
+          addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}🍪`);
         }
       } else if(utilProp.owner === -1) {
         gameState.turnActions.canBuy = true;
@@ -3165,6 +3376,11 @@ function doEndTurn(pi) {
   gameState.phase = 'roll';
   const np = gameState.players[next];
   gameState.message = `${np.name}'s turn - Roll the dice!`;
+
+  // Pass & Play: show pass screen for next human player
+  if(isPassAndPlay && !np.isBot) {
+    showPassScreen(next);
+  }
 }
 
 // =============================================
@@ -4199,5 +4415,12 @@ document.addEventListener('keydown', (e) => {
 });
 </script>
 <div id="card-overlay"></div>
+<div id="pass-device-overlay">
+  <div class="pass-title">PASS THE DEVICE</div>
+  <div class="pass-name" id="pass-player-name"></div>
+  <div id="pass-player-dot" style="width:40px;height:40px;border-radius:50%;border:3px solid rgba(255,255,255,0.5)"></div>
+  <div class="pass-hint">Hand the device to this player</div>
+  <button class="pass-btn" onclick="dismissPassScreen()">I'm Ready!</button>
+</div>
 </body>
 </html>
