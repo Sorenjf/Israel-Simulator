@@ -1851,6 +1851,13 @@ function handleGuestMessage(data) {
       list.innerHTML = data.players.map(p => `<div><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${p.emoji};vertical-align:middle;margin-right:6px;border:1px solid rgba(255,255,255,0.4)"></span>${p.name}</div>`).join('');
     }
   }
+  if(data.type === 'diceRoll') {
+    // Guest receives dice values from host — animate in sync
+    animateDiceRoll(data.d1, data.d2, () => {
+      // Animation done; the final state will arrive via broadcastState
+    });
+    return;
+  }
   if(data.type === 'tradeIncoming') {
     // Show trade modal to the target player
     if(data.trade.to === myPlayerIndex) {
@@ -2468,11 +2475,20 @@ function renderTokens() {
             }, i * STEP_DELAY);
           });
         } else {
-          // Fallback: direct move (e.g. sent to jail)
+          // Long move (e.g. sent to jail) — smooth diagonal slide
+          token._stepping = true;
+          token.style.transition = 'left 0.5s ease-in-out, top 0.5s ease-in-out';
           const coords = posToCoords(newCellPos);
           token.style.left = coords.left + 'px';
           token.style.top = coords.top + 'px';
           token.dataset.cellPos = newCellPos;
+          setTimeout(() => {
+            token._stepping = false;
+            token.style.transition = 'left 0.12s ease-out, top 0.12s ease-out';
+            token.classList.remove('token-moving');
+            void token.offsetWidth;
+            token.classList.add('token-moving');
+          }, 550);
         }
       } else if(!token._stepping) {
         // Position didn't change, just update coords (for stacking offset changes)
@@ -2763,13 +2779,7 @@ function renderTurnInfo() {
 // =============================================
 // ACTIONS
 // =============================================
-let _actionLock = false;
 function sendAction(action, payload) {
-  // Prevent double-clicks from firing duplicate actions
-  if(_actionLock) return;
-  _actionLock = true;
-  setTimeout(() => { _actionLock = false; }, 100);
-
   if(isHost) {
     handlePlayerAction(myPlayerIndex, action, payload);
   } else {
@@ -2857,8 +2867,10 @@ function doRoll(pi) {
   const total = d1 + d2;
   const doubles = d1 === d2;
 
-  // Disable buttons during animation
+  // Disable buttons during animation — broadcast immediately so guests see "rolling" state
   gameState.phase = 'rolling';
+  broadcastState();
+  wsSend({ type:'diceRoll', d1, d2 }); // send dice values so guests can animate in sync
   renderGame();
 
   // Start dice animation, then process result
@@ -3335,8 +3347,10 @@ function doRollJail(pi) {
   const d1 = Math.floor(Math.random()*6)+1;
   const d2 = Math.floor(Math.random()*6)+1;
 
-  // Disable buttons during animation
+  // Disable buttons during animation — broadcast immediately so guests see "rolling" state
   gameState.phase = 'rolling';
+  broadcastState();
+  wsSend({ type:'diceRoll', d1, d2 });
   renderGame();
 
   animateDiceRoll(d1, d2, () => {
