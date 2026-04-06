@@ -3386,13 +3386,18 @@ function doEndTurn(pi) {
 // =============================================
 // BOT AI
 // =============================================
+let _botTimeout = null;
 function checkBotTurn() {
   if(!isHost || !gameState || gameState.phase === 'waiting' || gameState.phase === 'gameOver') return;
   const p = gameState.players[gameState.currentPlayer];
   if(!p || !p.isBot || p.bankrupt) return;
 
+  // Cancel any previous bot timeout to prevent duplicate actions
+  if(_botTimeout) { clearTimeout(_botTimeout); _botTimeout = null; }
+
   // Delay bot actions slightly for a natural feel
-  setTimeout(() => {
+  _botTimeout = setTimeout(() => {
+    _botTimeout = null;
     if(!gameState) return;
     const pi = gameState.currentPlayer;
     const bp = gameState.players[pi];
@@ -3431,7 +3436,7 @@ function checkBotTurn() {
       }
       // After buying/passing, end turn
       setTimeout(() => {
-        if(gameState && gameState.currentPlayer === pi && gameState.phase === 'postRoll') {
+        if(gameState && gameState.currentPlayer === pi && gameState.phase === 'postRoll' && bp.isBot) {
           if(bp.money >= 0) {
             handlePlayerAction(pi, 'endTurn');
           }
@@ -4010,11 +4015,31 @@ function showTradeLogDetail(entryId) {
         </div>
       </div>
       <div class="trade-footer">
-        <button class="action-btn btn-end" onclick="closeTradeModal()">Close</button>
-        <button class="action-btn btn-mortgage" onclick="dismissTradeLog(${entry.id});closeTradeModal()">Dismiss</button>
+        ${entry.status === 'pending' && entry.to === myPlayerIndex ? `
+          <button class="action-btn btn-pay" onclick="reOpenPendingTrade(${entry.id})">Decline</button>
+          <button class="action-btn btn-buy" onclick="reOpenPendingTrade(${entry.id}, true)">Accept</button>
+        ` : `
+          <button class="action-btn btn-end" onclick="closeTradeModal()">Close</button>
+          <button class="action-btn btn-mortgage" onclick="dismissTradeLog(${entry.id});closeTradeModal()">Dismiss</button>
+        `}
       </div>
     </div>`;
   modal.classList.add('show');
+}
+
+function reOpenPendingTrade(entryId, accept) {
+  const entry = tradeLog.find(e => e.id === entryId);
+  if(!entry || entry.status !== 'pending') return;
+  // Reconstruct the trade offer from the log entry
+  pendingTrade = {
+    from: entry.from,
+    to: entry.to,
+    offerMoney: entry.offerMoney,
+    requestMoney: entry.requestMoney,
+    offerProps: entry.offerProps,
+    requestProps: entry.requestProps,
+  };
+  respondToTrade(!!accept);
 }
 
 function dismissTradeLog(entryId) {
