@@ -2780,6 +2780,12 @@ function renderActionPanel() {
 
   const me = gameState.players[myPlayerIndex];
 
+  // Hide buttons while a card is being displayed
+  if(gameState.cardDisplay) {
+    msg.textContent = gameState.message || 'Drawing card...';
+    return;
+  }
+
   if(gameState.phase === 'roll') {
     if(me.inJail) {
       addBtn(`Pay 50${COOKIE_ICON}`, 'btn-pay', () => sendAction('payJail'));
@@ -2915,6 +2921,9 @@ function handlePlayerAction(playerIdx, action, payload) {
 
   // Block actions while dice are animating
   if(gameState.phase === 'rolling') return;
+
+  // Block actions while a card is being displayed (Chance/Golden Scar)
+  if(gameState.cardDisplay) return;
 
   // Block rolls unless in roll phase (or postRoll with doubles for "Roll Again")
   if((action === 'roll' || action === 'rollJail') && gameState.phase !== 'roll') {
