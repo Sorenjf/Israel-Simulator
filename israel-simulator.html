@@ -372,9 +372,10 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   position: absolute; z-index: 10; width: 36px; height: 36px; border-radius: 50%;
   border: 3px solid rgba(255,255,255,0.85);
   box-shadow: 0 3px 8px rgba(0,0,0,0.6), 0 0 18px var(--token-color, #e94560);
-  transition: left 0.12s ease-out, top 0.12s ease-out;
+  transition: left 0.18s linear, top 0.18s linear;
   pointer-events: none;
   background: var(--token-color, #e94560);
+  will-change: left, top;
   /* Glossy effect */
   background-image: radial-gradient(ellipse at 35% 25%, rgba(255,255,255,0.4) 0%, transparent 60%);
 }
@@ -426,18 +427,24 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 .pc-color-dot { width: 6px; height: 6px; border-radius: 2px; }
 .player-card { position: relative; overflow: visible; }
 .pc-money-change {
-  position: absolute; right: -8px; top: 50%; transform: translateY(-50%);
-  font-size: 0.85em; font-weight: 700; pointer-events: none;
-  animation: moneyFloat 1.8s ease-out forwards; white-space: nowrap;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.7);
-  z-index: 20;
+  position: absolute; left: calc(100% + 8px); top: 50%;
+  font-size: 0.95em; font-weight: 800; pointer-events: none;
+  white-space: nowrap;
+  padding: 4px 10px; border-radius: 8px;
+  animation: moneyFloat 2.2s cubic-bezier(0.2,0.8,0.3,1) forwards;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  z-index: 100;
+  display: flex; align-items: center; gap: 3px;
 }
-.pc-money-change.gain { color: #2ecc71; }
-.pc-money-change.loss { color: #e94560; }
+.pc-money-change.gain { color: #fff; background: linear-gradient(135deg, #27ae60, #2ecc71); border: 1px solid rgba(255,255,255,0.3); }
+.pc-money-change.loss { color: #fff; background: linear-gradient(135deg, #c0392b, #e74c3c); border: 1px solid rgba(255,255,255,0.3); }
 @keyframes moneyFloat {
-  0% { opacity: 1; transform: translateY(-50%) translateX(0); }
-  20% { opacity: 1; transform: translateY(-50%) translateX(10px); }
-  100% { opacity: 0; transform: translateY(-80%) translateX(10px); }
+  0%   { opacity: 0; transform: translateY(-50%) translateX(-12px) scale(0.6); }
+  15%  { opacity: 1; transform: translateY(-50%) translateX(0) scale(1.15); }
+  25%  { opacity: 1; transform: translateY(-50%) translateX(0) scale(1); }
+  75%  { opacity: 1; transform: translateY(-50%) translateX(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-110%) translateX(0) scale(0.95); }
 }
 
 /* ============ CENTER HUD (floating overlay) ============ */
@@ -2238,7 +2245,7 @@ function buildBoard() {
       // Start corner — booster cookie image as icon
       div.innerHTML += `<img src="${imgSrc}" style="width:48px;height:48px;object-fit:contain;z-index:1;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5))">`;
       div.innerHTML += `<div class="cell-name">${cell.name}</div>`;
-      if(cell.cornerSub) div.innerHTML += `<div class="corner-sub">${cell.cornerSub.replace(/🍪/g, COOKIE_ICON)}</div>`;
+      if(cell.cornerSub) div.innerHTML += `<div class="corner-sub">${cell.cornerSub.replace(/\{C\}/g, COOKIE_ICON)}</div>`;
     } else if(cell.type === 'corner' && (useBg || useLogo)) {
       // Corner with custom image
       div.style.backgroundImage = `url(${imgSrc})`;
@@ -2413,11 +2420,13 @@ function showMoneyChange(playerIdx, delta) {
   if(!card) return;
   const el = document.createElement('div');
   el.className = 'pc-money-change ' + (delta > 0 ? 'gain' : 'loss');
-  el.innerHTML = (delta > 0 ? '+' : '') + delta + COOKIE_ICON;
+  const sign = delta > 0 ? '+' : '−';
+  const amount = Math.abs(delta);
+  el.innerHTML = `<span>${sign}${amount}</span>${COOKIE_ICON}`;
   // Remove any existing animation on this card
   card.querySelectorAll('.pc-money-change').forEach(e => e.remove());
   card.appendChild(el);
-  setTimeout(() => el.remove(), 1900);
+  setTimeout(() => el.remove(), 2300);
 }
 
 function checkMoneyChanges() {
@@ -2535,7 +2544,7 @@ function renderTokens() {
 
         if(steps.length > 0 && steps.length <= 14) {
           token._stepping = true;
-          const STEP_DELAY = 80;
+          const STEP_DELAY = 180;
           steps.forEach((cellIdx, i) => {
             setTimeout(() => {
               const coords = posToCoords(cellIdx);
@@ -2560,7 +2569,7 @@ function renderTokens() {
           token.dataset.cellPos = newCellPos;
           setTimeout(() => {
             token._stepping = false;
-            token.style.transition = 'left 0.12s ease-out, top 0.12s ease-out';
+            token.style.transition = 'left 0.18s linear, top 0.18s linear';
             token.classList.remove('token-moving');
             void token.offsetWidth;
             token.classList.add('token-moving');
@@ -2801,7 +2810,6 @@ function renderActionPanel() {
       const canAfford = curP.money >= cell.price;
       const buyBtn = addBtn(`Buy ${cell.price}${COOKIE_ICON}`, 'btn-buy', () => sendAction('buy'));
       if(!canAfford) { buyBtn.disabled = true; buyBtn.title = 'Not enough 🍪 — mortgage or trade to raise funds'; }
-      addBtn('Pass', 'btn-end', () => sendAction('passBuy'));
     }
     if(ta.canBuildAny) {
       addBtn('Build', 'btn-buy', () => sendAction('buildMenu'));
@@ -2984,7 +2992,7 @@ function doRoll(pi) {
     p.position = (p.position + total) % 40;
     if(p.position < oldPos && p.position !== 0) {
       p.money += 200;
-      addLog(`${p.emoji} ${p.name} passed GO! +200🍪`);
+      addLog(`${p.emoji} ${p.name} passed GO! +200{C}`);
     }
 
     addLog(`${p.emoji} ${p.name} rolled ${d1}+${d2}=${total}, landed on ${BOARD[p.position].name}`);
@@ -3025,11 +3033,11 @@ function handleLanding(pi) {
           p.money -= rent;
           gameState.players[prop.owner].money += rent;
           const ownerP = gameState.players[prop.owner];
-          addLog(`${p.emoji} ${p.name} paid ${rent}🍪 rent on ${cell.name} to ${ownerP.emoji} ${ownerP.name}`);
+          addLog(`${p.emoji} ${p.name} paid ${rent}{C} rent on ${cell.name} to ${ownerP.emoji} ${ownerP.name}`);
           if(p.money < 0) {
             gameState.phase = 'postRoll';
             gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
-            addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}🍪`);
+            addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}{C}`);
           } else {
             gameState.message = `Paid ${rent}🍪 rent to ${gameState.players[prop.owner].name}`;
           }
@@ -3040,11 +3048,11 @@ function handleLanding(pi) {
     case 'tax':
       p.money -= cell.amount;
       gameState.freeParkingPot += cell.amount;
-      addLog(`${p.emoji} ${p.name} paid ${cell.amount}🍪 tax`);
+      addLog(`${p.emoji} ${p.name} paid ${cell.amount}{C} tax`);
       if(p.money < 0) {
         gameState.phase = 'postRoll';
         gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
-        addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}🍪`);
+        addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}{C}`);
       } else {
         gameState.message = `${cell.desc}`;
       }
@@ -3061,12 +3069,12 @@ function handleLanding(pi) {
     case 'corner':
       if(p.position === 0) {
         p.money += 200;
-        addLog(`${p.emoji} ${p.name} landed on GO! +200🍪`);
+        addLog(`${p.emoji} ${p.name} landed on GO! +200{C}`);
       } else if(p.position === 20) {
         // Free parking - collect pot
         if(gameState.freeParkingPot > 0) {
           p.money += gameState.freeParkingPot;
-          addLog(`${p.emoji} ${p.name} collected ${gameState.freeParkingPot}🍪 from Free Parking!`);
+          addLog(`${p.emoji} ${p.name} collected ${gameState.freeParkingPot}{C} from Free Parking!`);
           gameState.message = `Collected ${gameState.freeParkingPot}🍪 from the pot!`;
           gameState.freeParkingPot = 0;
         }
@@ -3175,14 +3183,14 @@ function applyCardEffect(pi, card) {
       if(p.money < 0) {
         gameState.phase = 'postRoll';
         gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
-        addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}🍪`);
+        addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}{C}`);
       }
       break;
     case 'moveTo':
       const oldPos = p.position;
       p.position = card.value;
-      if(card.value < oldPos || card.value === 0) { p.money += 200; addLog(`${p.emoji} passed GO! +200🍪`); }
-      if(card.bonus) { p.money += card.bonus; addLog(`${p.emoji} bonus! +${card.bonus}🍪`); }
+      if(card.value < oldPos || card.value === 0) { p.money += 200; addLog(`${p.emoji} passed GO! +200{C}`); }
+      if(card.bonus) { p.money += card.bonus; addLog(`${p.emoji} bonus! +${card.bonus}{C}`); }
       handleLanding(pi);
       return;
     case 'moveBack':
@@ -3203,7 +3211,7 @@ function applyCardEffect(pi, card) {
       if(p.money < 0) {
         gameState.phase = 'postRoll';
         gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
-        addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}🍪`);
+        addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}{C}`);
       }
       break;
     }
@@ -3224,7 +3232,7 @@ function applyCardEffect(pi, card) {
       if(p.money < 0) {
         gameState.phase = 'postRoll';
         gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
-        addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}🍪`);
+        addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}{C}`);
       }
       break;
     }
@@ -3239,11 +3247,11 @@ function applyCardEffect(pi, card) {
       const repairCost = rHouses * card.value + rHotels * (card.hotelValue || card.value * 4);
       p.money -= repairCost;
       gameState.freeParkingPot += repairCost;
-      addLog(`🔧 ${p.emoji} ${p.name} pays ${repairCost}🍪 for repairs (${rHouses} houses, ${rHotels} hotels)`);
+      addLog(`🔧 ${p.emoji} ${p.name} pays ${repairCost}{C} for repairs (${rHouses} houses, ${rHotels} hotels)`);
       if(p.money < 0) {
         gameState.phase = 'postRoll';
         gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
-        addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}🍪`);
+        addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}{C}`);
       }
       break;
     }
@@ -3253,7 +3261,7 @@ function applyCardEffect(pi, card) {
       if(!nearest) nearest = railroads[0];
       const oldPosR = p.position;
       p.position = nearest;
-      if(nearest <= oldPosR) { p.money += 200; addLog(`${p.emoji} passed GO! +200🍪`); }
+      if(nearest <= oldPosR) { p.money += 200; addLog(`${p.emoji} passed GO! +200{C}`); }
       const rrProp = gameState.properties[nearest];
       if(rrProp.owner >= 0 && rrProp.owner !== pi && !rrProp.mortgaged) {
         const rrOwner = gameState.players[rrProp.owner];
@@ -3261,11 +3269,11 @@ function applyCardEffect(pi, card) {
         const rrRent = [25,50,100,200][rrCount - 1] * 2;
         p.money -= rrRent;
         rrOwner.money += rrRent;
-        addLog(`🚇 ${p.emoji} ${p.name} pays ${rrOwner.name} double BART fare: ${rrRent}🍪`);
+        addLog(`🚇 ${p.emoji} ${p.name} pays ${rrOwner.name} double BART fare: ${rrRent}{C}`);
         if(p.money < 0) {
           gameState.phase = 'postRoll';
           gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
-          addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}🍪`);
+          addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}{C}`);
         }
       } else if(rrProp.owner === -1) {
         gameState.turnActions.canBuy = true;
@@ -3279,7 +3287,7 @@ function applyCardEffect(pi, card) {
       if(!nearestU) nearestU = utilities[0];
       const oldPosU = p.position;
       p.position = nearestU;
-      if(nearestU <= oldPosU) { p.money += 200; addLog(`${p.emoji} passed GO! +200🍪`); }
+      if(nearestU <= oldPosU) { p.money += 200; addLog(`${p.emoji} passed GO! +200{C}`); }
       const utilProp = gameState.properties[nearestU];
       if(utilProp.owner >= 0 && utilProp.owner !== pi && !utilProp.mortgaged) {
         const utilOwner = gameState.players[utilProp.owner];
@@ -3287,11 +3295,11 @@ function applyCardEffect(pi, card) {
         const utilRent = diceRoll * 10;
         p.money -= utilRent;
         utilOwner.money += utilRent;
-        addLog(`⚡ ${p.emoji} ${p.name} rolled ${diceRoll} — pays ${utilOwner.name} ${utilRent}🍪 utility bill`);
+        addLog(`⚡ ${p.emoji} ${p.name} rolled ${diceRoll} — pays ${utilOwner.name} ${utilRent}{C} utility bill`);
         if(p.money < 0) {
           gameState.phase = 'postRoll';
           gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
-          addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}🍪`);
+          addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}{C}`);
         }
       } else if(utilProp.owner === -1) {
         gameState.turnActions.canBuy = true;
@@ -3342,7 +3350,7 @@ function doBuy(pi) {
   p.properties.push(p.position);
   gameState.turnActions.canBuy = false;
 
-  addLog(`${p.emoji} ${p.name} bought ${cell.name} for ${cell.price}🍪`);
+  addLog(`${p.emoji} ${p.name} bought ${cell.name} for ${cell.price}{C}`);
   gameState.message = `Bought ${cell.name}!`;
 }
 
@@ -3360,7 +3368,7 @@ function doPayDebt(pi) {
     }
     gameState.phase = 'postRoll';
     gameState.message = `Paid ${owed}🍪`;
-    addLog(`${p.emoji} ${p.name} paid ${owed}🍪`);
+    addLog(`${p.emoji} ${p.name} paid ${owed}{C}`);
   } else {
     // Not enough — go into debt, move to postRoll so player can mortgage/trade
     p.money -= owed;
@@ -3371,7 +3379,7 @@ function doPayDebt(pi) {
     }
     gameState.phase = 'postRoll';
     gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
-    addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}🍪`);
+    addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}{C}`);
   }
 }
 
@@ -3412,7 +3420,7 @@ function doPayJail(pi) {
     p.money -= 50;
     p.inJail = false;
     p.jailTurns = 0;
-    addLog(`${p.emoji} ${p.name} paid 50🍪 to leave jail`);
+    addLog(`${p.emoji} ${p.name} paid 50{C} to leave jail`);
     gameState.phase = 'roll';
     gameState.message = 'Free! Roll the dice.';
   }
@@ -3457,7 +3465,7 @@ function doRollJail(pi) {
         p.money -= 50;
         p.inJail = false;
         p.jailTurns = 0;
-        addLog(`${p.emoji} ${p.name} failed 3 times, paid 50🍪`);
+        addLog(`${p.emoji} ${p.name} failed 3 times, paid 50{C}`);
         gameState.phase = 'postRoll';
         gameState.message = 'Paid 50🍪 after 3 failed attempts.';
       } else {
@@ -3596,21 +3604,21 @@ function showPropertyInfo(idx) {
   let body = '';
   if(cell.type === 'property') {
     body = `
-      <div class="row"><span>Rent</span><span>${cell.rent[0]}🍪</span></div>
-      <div class="row"><span>1 House</span><span>${cell.rent[1]}🍪</span></div>
-      <div class="row"><span>2 Houses</span><span>${cell.rent[2]}🍪</span></div>
-      <div class="row"><span>3 Houses</span><span>${cell.rent[3]}🍪</span></div>
-      <div class="row"><span>4 Houses</span><span>${cell.rent[4]}🍪</span></div>
-      <div class="row"><span>Hotel</span><span>${cell.rent[5]}🍪</span></div>
-      <div class="row"><span>House Cost</span><span>${cell.house}🍪</span></div>
+      <div class="row"><span>Rent</span><span>${cell.rent[0]}${COOKIE_ICON}</span></div>
+      <div class="row"><span>1 House</span><span>${cell.rent[1]}${COOKIE_ICON}</span></div>
+      <div class="row"><span>2 Houses</span><span>${cell.rent[2]}${COOKIE_ICON}</span></div>
+      <div class="row"><span>3 Houses</span><span>${cell.rent[3]}${COOKIE_ICON}</span></div>
+      <div class="row"><span>4 Houses</span><span>${cell.rent[4]}${COOKIE_ICON}</span></div>
+      <div class="row"><span>Hotel</span><span>${cell.rent[5]}${COOKIE_ICON}</span></div>
+      <div class="row"><span>House Cost</span><span>${cell.house}${COOKIE_ICON}</span></div>
       <div class="row"><span>Houses Built</span><span>${prop.houses >= 5 ? '🏨 Hotel' : prop.houses + ' 🏠'}</span></div>
     `;
   } else if(cell.type === 'railroad') {
     body = `
-      <div class="row"><span>1 BART</span><span>25🍪</span></div>
-      <div class="row"><span>2 BARTs</span><span>50🍪</span></div>
-      <div class="row"><span>3 BARTs</span><span>100🍪</span></div>
-      <div class="row"><span>4 BARTs</span><span>200🍪</span></div>
+      <div class="row"><span>1 BART</span><span>25${COOKIE_ICON}</span></div>
+      <div class="row"><span>2 BARTs</span><span>50${COOKIE_ICON}</span></div>
+      <div class="row"><span>3 BARTs</span><span>100${COOKIE_ICON}</span></div>
+      <div class="row"><span>4 BARTs</span><span>200${COOKIE_ICON}</span></div>
     `;
   } else if(cell.type === 'utility') {
     body = `
@@ -3646,11 +3654,11 @@ function showPropertyInfo(idx) {
   if(isMine && gameState.currentPlayer === myPlayerIndex && cell.price) {
     if(!prop.mortgaged && prop.houses === 0) {
       const mortVal = Math.floor(cell.price / 2);
-      footer += `<button class="action-btn btn-mortgage" onclick="doMortgage(${idx})" style="margin-top:5px">Mortgage (+${mortVal}🍪)</button>`;
+      footer += `<button class="action-btn btn-mortgage" onclick="doMortgage(${idx})" style="margin-top:5px">Mortgage (+${mortVal}${COOKIE_ICON})</button>`;
     } else if(prop.mortgaged) {
       const unmortVal = Math.floor(cell.price / 2 * 1.1);
       const canAfford = gameState.players[myPlayerIndex].money >= unmortVal;
-      footer += `<button class="action-btn btn-buy" onclick="doUnmortgage(${idx})" style="margin-top:5px" ${canAfford ? '' : 'disabled'}>Unmortgage (${unmortVal}🍪)</button>`;
+      footer += `<button class="action-btn btn-buy" onclick="doUnmortgage(${idx})" style="margin-top:5px" ${canAfford ? '' : 'disabled'}>Unmortgage (${unmortVal}${COOKIE_ICON})</button>`;
     }
   }
 
@@ -3659,7 +3667,7 @@ function showPropertyInfo(idx) {
   card.innerHTML = `
     <div class="prop-card-header" style="background:${prop.mortgaged ? '#555' : color}">
       <h2 style="color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5)">${cell.name}</h2>
-      ${cell.price ? `<div style="color:rgba(255,255,255,0.8)">${cell.price}🍪</div>` : ''}
+      ${cell.price ? `<div style="color:rgba(255,255,255,0.8)">${cell.price}${COOKIE_ICON}</div>` : ''}
       ${prop.mortgaged ? '<div style="color:#ff6b6b;font-size:0.8em;font-weight:700">MORTGAGED</div>' : ''}
     </div>
     <div class="prop-card-body">
@@ -3721,7 +3729,7 @@ function doMortgage(idx) {
   const p = gameState.players[prop.owner];
   prop.mortgaged = true;
   p.money += mortgageValue;
-  addLog(`🏦 ${p.emoji} ${p.name} mortgaged ${cell.name} for ${mortgageValue}🍪`);
+  addLog(`🏦 ${p.emoji} ${p.name} mortgaged ${cell.name} for ${mortgageValue}{C}`);
   broadcastState();
   renderGame();
   showPropertyInfo(idx); // Refresh popup
@@ -3742,7 +3750,7 @@ function doUnmortgage(idx) {
 
   prop.mortgaged = false;
   p.money -= unmortgageCost;
-  addLog(`🏦 ${p.emoji} ${p.name} unmortgaged ${cell.name} for ${unmortgageCost}🍪`);
+  addLog(`🏦 ${p.emoji} ${p.name} unmortgaged ${cell.name} for ${unmortgageCost}{C}`);
   broadcastState();
   renderGame();
   showPropertyInfo(idx); // Refresh popup
@@ -3927,7 +3935,7 @@ function showVotekickModal() {
       <div class="vk-tally">
         <span class="vk-yes">✕ ${yesCount}</span>
         <span class="vk-no">✓ ${noCount}</span>
-        <span class="vk-waiting">⏳ ${waitCount}</span>
+        <span class="vk-waiting">${waitCount} waiting</span>
       </div>
       <div class="vk-buttons">${buttonsHtml}</div>
     </div>`;
@@ -3979,8 +3987,8 @@ function checkVotekickResult() {
     if(yesCount + remaining < vk.needed) {
       // Vote fails
       const target = gameState.players[vk.targetIdx];
-      addLog(`✅ ${target.emoji} ${target.name} survived the vote!`);
-      broadcastSystemChat(`✅ ${target.name} survived the vote!`);
+      addLog(`${target.emoji} ${target.name} survived the vote!`);
+      broadcastSystemChat(`${target.name} survived the vote!`);
       activeVotekick = null;
       closeVotekickModal();
       wsSend({ type:'votekickResult', result: 'survived', targetIdx: vk.targetIdx });
@@ -4076,13 +4084,13 @@ function renderTradeLog() {
     if(!fromP || !toP) return '';
 
     const statusClass = entry.status;
-    const statusText = entry.status === 'pending' ? '⏳ Pending' : entry.status === 'accepted' ? '✅ Accepted' : '❌ Declined';
+    const statusText = entry.status === 'pending' ? 'Pending' : entry.status === 'accepted' ? 'Accepted' : 'Declined';
 
     const fromDot = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${fromP.emoji};border:1px solid rgba(255,255,255,0.4)"></span>`;
     const toDot = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${toP.emoji};border:1px solid rgba(255,255,255,0.4)"></span>`;
     let details = [];
-    if(entry.offerMoney > 0) details.push(`Offers ${entry.offerMoney}🍪`);
-    if(entry.requestMoney > 0) details.push(`Wants ${entry.requestMoney}🍪`);
+    if(entry.offerMoney > 0) details.push(`Offers ${entry.offerMoney}${COOKIE_ICON}`);
+    if(entry.requestMoney > 0) details.push(`Wants ${entry.requestMoney}${COOKIE_ICON}`);
     entry.offerProps.forEach(idx => details.push(`Offers ${BOARD[idx]?.name || '?'}`));
     entry.requestProps.forEach(idx => details.push(`Wants ${BOARD[idx]?.name || '?'}`));
 
@@ -4106,14 +4114,14 @@ function showTradeLogDetail(entryId) {
   if(!fromP || !toP) return;
 
   const statusClass = entry.status;
-  const statusText = entry.status === 'pending' ? '⏳ Pending' : entry.status === 'accepted' ? '✅ Accepted' : '❌ Declined';
+  const statusText = entry.status === 'pending' ? 'Pending' : entry.status === 'accepted' ? 'Accepted' : 'Declined';
 
   function propList(indices) {
     if(indices.length === 0) return '<div style="color:#555;font-size:0.9em">None</div>';
     return indices.map(idx => {
       const cell = BOARD[idx];
       const color = cell?.color ? COLORS[cell.color] : '#666';
-      return `<div style="font-size:0.9em;padding:2px 0"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${color};margin-right:6px;vertical-align:middle"></span>${cell?.name || '?'} (${cell?.price || 0}🍪)</div>`;
+      return `<div style="font-size:0.9em;padding:2px 0"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${color};margin-right:6px;vertical-align:middle"></span>${cell?.name || '?'} (${cell?.price || 0}${COOKIE_ICON})</div>`;
     }).join('');
   }
 
@@ -4131,14 +4139,14 @@ function showTradeLogDetail(entryId) {
         <div style="flex:1;padding:12px;border-right:1px solid #2a3a4a">
           <div class="trade-summary-col">
             <h5>${fromP.name} gives</h5>
-            ${entry.offerMoney > 0 ? `<div style="color:#f5a623;font-weight:600;font-size:0.9em">${entry.offerMoney}🍪</div>` : ''}
+            ${entry.offerMoney > 0 ? `<div style="color:#f5a623;font-weight:600;font-size:0.9em">${entry.offerMoney}${COOKIE_ICON}</div>` : ''}
             ${propList(entry.offerProps)}
           </div>
         </div>
         <div style="flex:1;padding:12px">
           <div class="trade-summary-col">
             <h5>${fromP.name} wants</h5>
-            ${entry.requestMoney > 0 ? `<div style="color:#f5a623;font-weight:600;font-size:0.9em">${entry.requestMoney}🍪</div>` : ''}
+            ${entry.requestMoney > 0 ? `<div style="color:#f5a623;font-weight:600;font-size:0.9em">${entry.requestMoney}${COOKIE_ICON}</div>` : ''}
             ${propList(entry.requestProps)}
           </div>
         </div>
@@ -4230,7 +4238,7 @@ function openTradeModal() {
         <span class="tp-emoji" style="display:inline-block;width:28px;height:28px;border-radius:50%;background:${p.emoji};border:2px solid rgba(255,255,255,0.5);box-shadow:0 0 8px ${p.emoji}"></span>
         <div class="tp-info">
           <div class="tp-name">${p.name}</div>
-          <div class="tp-money">${p.money}🍪 · ${propCount} properties</div>
+          <div class="tp-money">${p.money}${COOKIE_ICON} · ${propCount} properties</div>
         </div>
       </button>`;
   });
@@ -4282,7 +4290,7 @@ function renderTradeCreation() {
     const colorDot = cell.color ? `<span class="tpc-dot" style="background:${COLORS[cell.color]}"></span>` :
       (cell.type === 'railroad' ? '<span class="tpc-dot" style="background:#666">🚇</span>' : '<span class="tpc-dot" style="background:#999"></span>');
     return `<div class="trade-prop-card ${selected ? 'selected' : ''}" onclick="toggleTradeProperty(${idx},'${side}')">
-      ${colorDot} <span>${cell.name}</span> <span class="tpc-price">${cell.price}🍪</span>
+      ${colorDot} <span>${cell.name}</span> <span class="tpc-price">${cell.price}${COOKIE_ICON}</span>
     </div>`;
   }
 
@@ -4302,7 +4310,7 @@ function renderTradeCreation() {
           <div class="trade-money-section">
             <div class="trade-money-label">
               <span>Money</span>
-              <span class="trade-money-badge" id="my-money-badge">${tradeState.myMoney}🍪</span>
+              <span class="trade-money-badge" id="my-money-badge">${tradeState.myMoney}${COOKIE_ICON}</span>
             </div>
             <input type="range" class="trade-money-slider" min="0" max="${me.money}" value="${tradeState.myMoney}"
               oninput="tradeState.myMoney=parseInt(this.value);document.getElementById('my-money-badge').textContent=this.value+'🍪'">
@@ -4315,7 +4323,7 @@ function renderTradeCreation() {
           <div class="trade-money-section">
             <div class="trade-money-label">
               <span>Money</span>
-              <span class="trade-money-badge" id="their-money-badge">${tradeState.theirMoney}🍪</span>
+              <span class="trade-money-badge" id="their-money-badge">${tradeState.theirMoney}${COOKIE_ICON}</span>
             </div>
             <input type="range" class="trade-money-slider" min="0" max="${them.money}" value="${tradeState.theirMoney}"
               oninput="tradeState.theirMoney=parseInt(this.value);document.getElementById('their-money-badge').textContent=this.value+'🍪'">
@@ -4401,7 +4409,7 @@ function showIncomingTrade(offer) {
     return indices.map(idx => {
       const cell = BOARD[idx];
       const color = cell.color ? COLORS[cell.color] : '#666';
-      return `<div class="trade-summary-item"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${color};margin-right:6px;vertical-align:middle"></span>${cell.name} (${cell.price}🍪)</div>`;
+      return `<div class="trade-summary-item"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${color};margin-right:6px;vertical-align:middle"></span>${cell.name} (${cell.price}${COOKIE_ICON})</div>`;
     }).join('');
   }
 
@@ -4417,14 +4425,14 @@ function showIncomingTrade(offer) {
         <div style="flex:1;padding:12px;border-right:1px solid #2a3a4a">
           <div class="trade-summary-col">
             <h5>${from.name} gives</h5>
-            ${offer.offerMoney > 0 ? `<div class="trade-summary-item" style="color:#f5a623;font-weight:600">${offer.offerMoney}🍪</div>` : ''}
+            ${offer.offerMoney > 0 ? `<div class="trade-summary-item" style="color:#f5a623;font-weight:600">${offer.offerMoney}${COOKIE_ICON}</div>` : ''}
             ${propList(offer.offerProps)}
           </div>
         </div>
         <div style="flex:1;padding:12px">
           <div class="trade-summary-col">
             <h5>${from.name} wants</h5>
-            ${offer.requestMoney > 0 ? `<div class="trade-summary-item" style="color:#f5a623;font-weight:600">${offer.requestMoney}🍪</div>` : ''}
+            ${offer.requestMoney > 0 ? `<div class="trade-summary-item" style="color:#f5a623;font-weight:600">${offer.requestMoney}${COOKIE_ICON}</div>` : ''}
             ${propList(offer.requestProps)}
           </div>
         </div>
@@ -4506,11 +4514,11 @@ function handleTradeResponse(response) {
       from.properties.push(idx);
     });
 
-    addLog(`✅ Trade completed between ${from.name} and ${to.name}!`);
+    addLog(`Trade completed between ${from.name} and ${to.name}!`);
     // Update trade log - find pending trade matching this one and mark accepted
     updateTradeLogStatus(trade, 'accepted');
   } else {
-    addLog(`❌ ${to.name} declined the trade from ${from.name}`);
+    addLog(`${to.name} declined the trade from ${from.name}`);
     updateTradeLogStatus(trade, 'declined');
     // Broadcast decline to all guests so their trade modals close and logs update
     wsSend({ type:'tradeDeclined', from: trade.from, to: trade.to });
@@ -4539,7 +4547,9 @@ function playerDot(playerOrIdx) {
 
 function addLog(msg) {
   if(!gameState.log) gameState.log = [];
-  gameState.log.push(msg);
+  // Replace ${COOKIE_ICON} placeholder with cookie icon HTML
+  const processed = String(msg).replace(/\{C\}/g, COOKIE_ICON);
+  gameState.log.push(processed);
   if(gameState.log.length > 100) gameState.log.shift();
 }
 
