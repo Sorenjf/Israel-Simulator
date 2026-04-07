@@ -1478,6 +1478,12 @@ let pendingGuests = {}; // host only: socketId -> {name, socketId} waiting for c
 let guestSelectedColor = null; // guest only: color picked in join color picker
 let myId = null;
 let roomCode = '';
+let myClientId = 'c_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+let reconnectAttempts = 0;
+let reconnectTimer = null;
+let intentionalClose = false;
+let isResumed = false; // true once room is established and reconnection should be attempted
+let reconnectBanner = null;
 let socketIdToPlayerIdx = {}; // host only: guest socketId -> playerIndex
 let playerIdxToSocketId = {}; // host only: playerIndex -> guest socketId
 
@@ -1599,7 +1605,7 @@ function createRoom() {
   }, 8000);
 
   ws.onopen = () => {
-    ws.send(JSON.stringify({ type: 'createRoom', roomCode }));
+    ws.send(JSON.stringify({ type: 'createRoom', roomCode, clientId: myClientId }));
   };
 
   ws.onmessage = (e) => {
@@ -1608,12 +1614,31 @@ function createRoom() {
 
     if (data.type === 'roomCreated') {
       roomReady = true;
+      isResumed = true;
+      reconnectAttempts = 0;
       clearTimeout(wsTimeout);
       gameState = createInitialState();
       addPlayerToState(getPlayerName(), selectedEmoji);
       myPlayerIndex = 0;
       gameState.phase = 'waiting';
       showGameScreenWaiting();
+      return;
+    }
+    if (data.type === 'resumedHost') {
+      reconnectAttempts = 0;
+      hideReconnectBanner();
+      // Re-broadcast state so guests refresh
+      broadcastState();
+      return;
+    }
+    if (data.type === 'guestResumed') {
+      // A guest reconnected — re-send state directly to them
+      wsSend({ type:'state', state: gameState, _targetSocketId: data.socketId });
+      return;
+    }
+    if (data.type === 'resumeFailed') {
+      intentionalClose = true;
+      showReconnectBanner('Connection lost — please refresh to rejoin.');
       return;
     }
     if (data.type === 'error') {
@@ -1639,8 +1664,8 @@ function createRoom() {
       clearTimeout(wsTimeout);
       ws = null;
       startLocalWaiting();
-    } else if (document.getElementById('game').style.display !== 'none') {
-      addLog('⚠️ Server connection lost!');
+    } else if (!intentionalClose && isResumed) {
+      scheduleReconnect();
     }
   };
 }
@@ -1792,7 +1817,7 @@ function joinRoom() {
   ws = new WebSocket(`${protocol}//${location.host}`);
 
   ws.onopen = () => {
-    ws.send(JSON.stringify({ type: 'joinRoom', roomCode, name: getPlayerName() }));
+    ws.send(JSON.stringify({ type: 'joinRoom', roomCode, name: getPlayerName(), clientId: myClientId }));
   };
 
   ws.onmessage = (e) => {
@@ -1800,9 +1825,21 @@ function joinRoom() {
     try { data = JSON.parse(e.data); } catch { return; }
 
     if (data.type === 'joined') {
+      isResumed = true;
+      reconnectAttempts = 0;
       document.getElementById('lobby-main').style.display = 'none';
       document.getElementById('lobby-joining').style.display = 'block';
       document.getElementById('lobby-guest-status').textContent = 'Connected! Choose your color to join.';
+      return;
+    }
+    if (data.type === 'resumedGuest') {
+      reconnectAttempts = 0;
+      hideReconnectBanner();
+      return;
+    }
+    if (data.type === 'resumeFailed') {
+      intentionalClose = true;
+      showReconnectBanner('Host is no longer available — please refresh.');
       return;
     }
     if (data.type === 'pickColor') {
@@ -1823,9 +1860,117 @@ function joinRoom() {
 
   ws.onerror = () => setStatus('Connection error');
   ws.onclose = () => {
-    document.getElementById('lobby-guest-status').textContent = 'Disconnected!';
+    if (!intentionalClose && isResumed) {
+      scheduleReconnect();
+    } else {
+      document.getElementById('lobby-guest-status').textContent = 'Disconnected!';
+    }
   };
 }
+
+// =============================================
+// RECONNECTION
+// =============================================
+function showReconnectBanner(text) {
+  if (!reconnectBanner) {
+    reconnectBanner = document.createElement('div');
+    reconnectBanner.id = 'reconnect-banner';
+    reconnectBanner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#c0392b,#e67e22);color:#fff;padding:10px 16px;text-align:center;font-weight:700;z-index:100000;box-shadow:0 2px 12px rgba(0,0,0,0.5);letter-spacing:0.3px;';
+    document.body.appendChild(reconnectBanner);
+  }
+  reconnectBanner.textContent = text;
+  reconnectBanner.style.display = 'block';
+}
+function hideReconnectBanner() {
+  if (reconnectBanner) reconnectBanner.style.display = 'none';
+}
+
+function scheduleReconnect() {
+  if (intentionalClose) return;
+  if (reconnectTimer) return;
+  reconnectAttempts++;
+  if (reconnectAttempts > 30) {
+    showReconnectBanner('Could not reconnect — please refresh the page.');
+    return;
+  }
+  showReconnectBanner(`Reconnecting to server... (attempt ${reconnectAttempts})`);
+  const delay = Math.min(5000, 500 * reconnectAttempts);
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    attemptReconnect();
+  }, delay);
+}
+
+function attemptReconnect() {
+  if (intentionalClose) return;
+  try {
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${protocol}//${location.host}`);
+  } catch (e) {
+    scheduleReconnect();
+    return;
+  }
+  ws.onopen = () => {
+    if (isHost) {
+      ws.send(JSON.stringify({ type: 'resumeHost', roomCode, clientId: myClientId }));
+    } else {
+      ws.send(JSON.stringify({ type: 'resumeGuest', roomCode, clientId: myClientId }));
+    }
+  };
+  ws.onmessage = (e) => {
+    let data;
+    try { data = JSON.parse(e.data); } catch { return; }
+    if (isHost) {
+      if (data.type === 'resumedHost') {
+        reconnectAttempts = 0;
+        hideReconnectBanner();
+        broadcastState();
+        return;
+      }
+      if (data.type === 'resumeFailed') {
+        intentionalClose = true;
+        showReconnectBanner('Session expired — please refresh.');
+        return;
+      }
+      if (data.type === 'guestResumed') {
+        wsSend({ type:'state', state: gameState, _targetSocketId: data.socketId });
+        return;
+      }
+      handleHostMessage(data);
+    } else {
+      if (data.type === 'resumedGuest') {
+        reconnectAttempts = 0;
+        hideReconnectBanner();
+        return;
+      }
+      if (data.type === 'resumeFailed') {
+        intentionalClose = true;
+        showReconnectBanner('Host is no longer available — please refresh.');
+        return;
+      }
+      if (data.type === 'hostDisconnected') {
+        intentionalClose = true;
+        showReconnectBanner('Host disconnected.');
+        return;
+      }
+      handleGuestMessage(data);
+    }
+  };
+  ws.onerror = () => {};
+  ws.onclose = () => {
+    if (!intentionalClose) scheduleReconnect();
+  };
+}
+
+// Reconnect immediately when the tab comes back to the foreground
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && isResumed && !intentionalClose) {
+    if (!ws || ws.readyState === 3 /* CLOSED */ || ws.readyState === 2 /* CLOSING */) {
+      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      attemptReconnect();
+    }
+  }
+});
 
 // HOST: handle messages from guests (via relay server)
 function handleHostMessage(data) {
