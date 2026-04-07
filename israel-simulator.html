@@ -1936,9 +1936,10 @@ function handleGuestMessage(data) {
       showIncomingTrade(data.trade);
     }
   }
-  if(data.type === 'tradeDeclined') {
-    // Close trade modal and update log for all players
-    updateTradeLogStatus({ from: data.from, to: data.to }, 'declined');
+  if(data.type === 'tradeResolved') {
+    // Update trade log status for all players (proposer + others)
+    updateTradeLogStatus({ from: data.from, to: data.to }, data.status);
+    // Close any open trade modal so the proposer's UI clears
     closeTradeModal();
   }
   if(data.type === 'chat') {
@@ -4517,11 +4518,13 @@ function handleTradeResponse(response) {
     addLog(`Trade completed between ${from.name} and ${to.name}!`);
     // Update trade log - find pending trade matching this one and mark accepted
     updateTradeLogStatus(trade, 'accepted');
+    // Broadcast accept to all guests so their trade logs update and modals close
+    wsSend({ type:'tradeResolved', from: trade.from, to: trade.to, status: 'accepted' });
   } else {
     addLog(`${to.name} declined the trade from ${from.name}`);
     updateTradeLogStatus(trade, 'declined');
     // Broadcast decline to all guests so their trade modals close and logs update
-    wsSend({ type:'tradeDeclined', from: trade.from, to: trade.to });
+    wsSend({ type:'tradeResolved', from: trade.from, to: trade.to, status: 'declined' });
   }
 
   gameState.pendingTrade = null;
