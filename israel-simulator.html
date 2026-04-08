@@ -151,7 +151,7 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 
 /* ============ BOARD ============ */
 #board-container {
-  position: absolute; top: calc(50% + 25px); left: 50%; transform: translate(-50%, -50%) scale(0.7);
+  position: absolute; top: calc(50% + 25px); left: 50%; transform: translate(-50%, -50%) scale(0.92);
   width: 1020px; height: 1020px; z-index: 1;
   transform-origin: center center;
 }
@@ -1059,34 +1059,37 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 .action-btn:nth-child(5) { animation-delay: 0.24s; }
 
 /* ============ RESPONSIVE ============ */
+@media(max-width:1800px) {
+  #board-container { transform: translate(-50%,-50%) scale(1.02); }
+}
 @media(max-width:1600px) {
-  #board-container { transform: translate(-50%,-50%) scale(0.86); }
+  #board-container { transform: translate(-50%,-50%) scale(0.96); }
 }
 @media(max-width:1400px) {
-  #board-container { transform: translate(-50%,-50%) scale(0.78); }
+  #board-container { transform: translate(-50%,-50%) scale(0.88); }
 }
 @media(max-height:960px) {
-  #board-container { transform: translate(-50%,-50%) scale(0.76); }
+  #board-container { transform: translate(-50%,-50%) scale(0.86); }
 }
 @media(max-height:880px) {
-  #board-container { transform: translate(-50%,-50%) scale(0.70); }
+  #board-container { transform: translate(-50%,-50%) scale(0.80); }
 }
 @media(max-width:1100px) {
-  #board-container { transform: translate(-50%,-50%) scale(0.62); }
+  #board-container { transform: translate(-50%,-50%) scale(0.70); }
   #action-panel { min-width: 200px; max-width: 260px; padding: 8px 12px; }
   #players-panel { width: 180px; }
   #chat-panel { width: 200px; }
   #right-sidebar { width: 200px; }
 }
 @media(max-height:750px) {
-  #board-container { transform: translate(-50%,-50%) scale(0.58); }
+  #board-container { transform: translate(-50%,-50%) scale(0.66); }
 }
 @media(max-width:600px) {
-  #board-container { transform: translate(-50%,-50%) scale(0.40); }
+  #board-container { transform: translate(-50%,-50%) scale(0.46); }
   #players-panel { display: none; }
 }
 @media(max-height:650px) {
-  #board-container { transform: translate(-50%,-50%) scale(0.48); }
+  #board-container { transform: translate(-50%,-50%) scale(0.54); }
 }
 
 /* ── Card Overlay (non-blocking banner, top-left away from board) ── */
@@ -4349,14 +4352,12 @@ function updateTradeLogStatus(trade, status) {
     entry.status = status;
     renderTradeLog();
     updateTradeLogBadge();
-    // Auto-dismiss declined trades after a brief display
-    if(status === 'declined') {
-      setTimeout(() => {
-        tradeLog = tradeLog.filter(e => e.id !== entry.id);
-        renderTradeLog();
-        updateTradeLogBadge();
-      }, 3000);
-    }
+    // Auto-dismiss resolved trades (accepted or declined) after a brief display
+    setTimeout(() => {
+      tradeLog = tradeLog.filter(e => e.id !== entry.id);
+      renderTradeLog();
+      updateTradeLogBadge();
+    }, status === 'accepted' ? 2500 : 3000);
   }
 }
 
@@ -4684,6 +4685,8 @@ function handleTradeResponse(response) {
   }
 
   gameState.pendingTrade = null;
+  // Close any open trade modal on the host too (proposer or responder side)
+  closeTradeModal();
   broadcastState();
   renderGame();
 }
