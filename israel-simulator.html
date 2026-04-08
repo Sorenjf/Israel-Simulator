@@ -151,7 +151,7 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 
 /* ============ BOARD ============ */
 #board-container {
-  position: absolute; top: calc(50% + 25px); left: 50%; transform: translate(-50%, -50%) scale(0.92);
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.98);
   width: 1020px; height: 1020px; z-index: 1;
   transform-origin: center center;
 }
@@ -389,18 +389,8 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 /* ============ SIDE PANELS ============ */
-#top-bar {
-  position: absolute; top: 0; left: 0; right: 0; height: 52px;
-  background: linear-gradient(135deg, rgba(14,12,28,0.97) 0%, rgba(10,16,30,0.97) 100%);
-  display: flex; align-items: center; justify-content: center; padding: 0 20px;
-  box-shadow: 0 2px 20px rgba(0,0,0,0.4), 0 1px 0 rgba(233,69,96,0.1);
-  z-index: 20; backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(233,69,96,0.08);
-}
-#top-bar .turn-info { color: #d0d0e8; font-size: 1em; font-weight: 600; letter-spacing: 0.5px; }
-
 #players-panel {
-  position: absolute; top: 55px; left: 10px; width: 210px; z-index: 15;
+  position: absolute; top: 10px; left: 10px; width: 210px; z-index: 15;
   display: flex; flex-direction: column; gap: 5px;
 }
 .player-card {
@@ -633,9 +623,9 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 /* ============ TRADE BOX + LOG ============ */
 /* ============ RIGHT SIDEBAR ============ */
 #right-sidebar {
-  position: absolute; top: 58px; right: 10px; width: 230px; z-index: 15;
+  position: absolute; top: 10px; right: 10px; width: 230px; z-index: 15;
   display: flex; flex-direction: column; gap: 8px;
-  max-height: calc(100vh - 70px); overflow-y: auto;
+  max-height: calc(100vh - 20px); overflow-y: auto;
 }
 #right-sidebar::-webkit-scrollbar { width: 4px; }
 #right-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
@@ -1254,9 +1244,6 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     <div class="room-code" id="game-room-code"></div>
   </div>
 
-  <div id="top-bar">
-    <div class="turn-info" id="turn-info">Waiting...</div>
-  </div>
 
   <div id="players-panel"></div>
 
@@ -3035,8 +3022,7 @@ function renderLog() {
 }
 
 function renderTurnInfo() {
-  const cp = gameState.players[gameState.currentPlayer];
-  document.getElementById('turn-info').textContent = cp ? `${cp.name}'s turn` : '';
+  // Top-bar turn display removed; turn ownership is shown via active player card highlight.
 }
 
 // =============================================
