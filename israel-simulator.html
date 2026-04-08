@@ -3220,8 +3220,8 @@ function handleLanding(pi) {
 
     case 'corner':
       if(p.position === 0) {
-        p.money += 200;
-        addLog(`${p.emoji} ${p.name} landed on GO! +200{C}`);
+        p.money += 300;
+        addLog(`${p.emoji} ${p.name} landed on GO! +300{C}`);
       } else if(p.position === 20) {
         // Free parking - collect pot
         if(gameState.freeParkingPot > 0) {
@@ -3341,8 +3341,12 @@ function applyCardEffect(pi, card) {
     case 'moveTo':
       const oldPos = p.position;
       p.position = card.value;
-      if(card.value < oldPos || card.value === 0) { p.money += 200; addLog(`${p.emoji} passed GO! +200{C}`); }
-      if(card.bonus) { p.money += card.bonus; addLog(`${p.emoji} bonus! +${card.bonus}{C}`); }
+      // Landing on GO (value 0) is handled in handleLanding for the full 300;
+      // don't also award a pass-GO bonus or the card's bonus, to avoid stacking.
+      if(card.value !== 0) {
+        if(card.value < oldPos) { p.money += 200; addLog(`${p.emoji} passed GO! +200{C}`); }
+        if(card.bonus) { p.money += card.bonus; addLog(`${p.emoji} bonus! +${card.bonus}{C}`); }
+      }
       handleLanding(pi);
       return;
     case 'moveBack':
