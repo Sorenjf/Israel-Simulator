@@ -681,13 +681,21 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 .trade-log-entry .tle-status.pending { color: #f5a623; }
 .trade-log-entry .tle-status.accepted { color: #27ae60; }
 .trade-log-entry .tle-status.declined { color: #e94560; }
+.trade-log-entry .tle-status.cancelled { color: #888; }
+.trade-log-entry .tle-status.invalid { color: #e94560; }
 .trade-log-entry .tle-details { color: #888; font-size: 0.9em; }
-.trade-log-entry .tle-dismiss {
-  background: none; border: none; color: #555; font-size: 0.8em;
-  cursor: pointer; padding: 2px 6px; border-radius: 4px; position: absolute; top: 6px; right: 6px;
-  transition: all 0.15s;
+.trade-log-entry.invalid { border-left: 3px solid #e94560; }
+.trade-log-entry .tle-warning {
+  color: #e94560; font-size: 0.78em; font-weight: 700; margin-top: 4px;
+  background: rgba(233,69,96,0.1); padding: 3px 6px; border-radius: 4px;
+  letter-spacing: 0.3px;
 }
-.trade-log-entry .tle-dismiss:hover { color: #e94560; background: rgba(233,69,96,0.1); }
+.trade-invalid-msg {
+  color: #e94560; font-weight: 700; text-align: center;
+  background: rgba(233,69,96,0.12); padding: 8px 12px; border-radius: 6px;
+  margin: 8px 14px; border: 1px solid rgba(233,69,96,0.3);
+}
+.action-btn[disabled] { opacity: 0.4; cursor: not-allowed; filter: grayscale(0.6); }
 .trade-log-empty { color: #555; font-size: 0.8em; font-style: italic; padding: 14px 12px; text-align: center; }
 
 /* ============ MY PROPERTIES PANEL ============ */
@@ -2092,7 +2100,12 @@ function handleGuestMessage(data) {
   if(data.type === 'tradeResolved') {
     // Update trade log status for all players (proposer + others)
     updateTradeLogStatus({ from: data.from, to: data.to }, data.status);
-    // Close any open trade modal so the proposer's UI clears
+    // If this guest was the responder, clear their pending trade so the
+    // refresh in renderGame doesn't immediately re-open the incoming modal.
+    if(pendingTrade && pendingTrade.from === data.from && pendingTrade.to === data.to) {
+      pendingTrade = null;
+    }
+    // Close any open trade modal so the proposer/responder UI clears
     closeTradeModal();
   }
   if(data.type === 'chat') {
@@ -2516,6 +2529,9 @@ function renderGame() {
   if(!gameState) return;
   renderPlayers();
   checkMoneyChanges();
+  renderTradeLog();
+  // Refresh the open incoming-trade modal so its Accept button reflects validity
+  if(pendingTrade) showIncomingTrade(pendingTrade);
   renderTokens();
   renderBoard();
   renderActionPanel();
@@ -3044,6 +3060,24 @@ function handlePlayerAction(playerIdx, action, payload) {
   }
   if(action === 'tradeResponse') {
     handleTradeResponse(payload);
+    return;
+  }
+  if(action === 'tradeCancel') {
+    // payload: { from, to } — proposer cancels their own pending trade
+    if(payload && gameState.pendingTrade &&
+       gameState.pendingTrade.from === payload.from &&
+       gameState.pendingTrade.to === payload.to) {
+      gameState.pendingTrade = null;
+    }
+    if(payload) {
+      const fromP = gameState.players[payload.from];
+      const toP = gameState.players[payload.to];
+      if(fromP && toP) addLog(`${fromP.name} cancelled their trade with ${toP.name}`);
+      updateTradeLogStatus(payload, 'cancelled');
+      wsSend({ type:'tradeResolved', from: payload.from, to: payload.to, status: 'cancelled' });
+    }
+    broadcastState();
+    renderGame();
     return;
   }
 
@@ -4229,6 +4263,19 @@ function addTradeToLog(trade, status) {
   updateTradeLogBadge();
 }
 
+// Returns true if a pending trade can still be executed given current game state.
+function isTradeValid(entry) {
+  if(!gameState) return false;
+  const from = gameState.players[entry.from];
+  const to = gameState.players[entry.to];
+  if(!from || !to || from.bankrupt || to.bankrupt) return false;
+  if(from.money < entry.offerMoney) return false;
+  if(to.money < entry.requestMoney) return false;
+  if(!entry.offerProps.every(idx => gameState.properties[idx] && gameState.properties[idx].owner === entry.from)) return false;
+  if(!entry.requestProps.every(idx => gameState.properties[idx] && gameState.properties[idx].owner === entry.to)) return false;
+  return true;
+}
+
 function renderTradeLog() {
   const body = document.getElementById('trade-log-body');
   if(!body || !gameState) return;
@@ -4244,7 +4291,12 @@ function renderTradeLog() {
     if(!fromP || !toP) return '';
 
     const statusClass = entry.status;
-    const statusText = entry.status === 'pending' ? 'Pending' : entry.status === 'accepted' ? 'Accepted' : 'Declined';
+    const isPending = entry.status === 'pending';
+    const invalid = isPending && !isTradeValid(entry);
+    const statusText =
+      entry.status === 'pending' ? (invalid ? 'Unable' : 'Pending') :
+      entry.status === 'accepted' ? 'Accepted' :
+      entry.status === 'cancelled' ? 'Cancelled' : 'Declined';
 
     const fromDot = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${fromP.emoji};border:1px solid rgba(255,255,255,0.4)"></span>`;
     const toDot = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${toP.emoji};border:1px solid rgba(255,255,255,0.4)"></span>`;
@@ -4254,13 +4306,15 @@ function renderTradeLog() {
     entry.offerProps.forEach(idx => details.push(`Offers ${BOARD[idx]?.name || '?'}`));
     entry.requestProps.forEach(idx => details.push(`Wants ${BOARD[idx]?.name || '?'}`));
 
-    return `<div class="trade-log-entry" onclick="showTradeLogDetail(${entry.id})">
+    const warning = invalid ? `<div class="tle-warning">Trade is unable to be made</div>` : '';
+
+    return `<div class="trade-log-entry${invalid ? ' invalid' : ''}" onclick="showTradeLogDetail(${entry.id})">
       <div class="tle-header">
         <span class="tle-players">${fromDot} ${fromP.name} → ${toDot} ${toP.name}</span>
-        <span class="tle-status ${statusClass}">${statusText}</span>
+        <span class="tle-status ${statusClass}${invalid ? ' invalid' : ''}">${statusText}</span>
       </div>
       <div class="tle-details">${details.slice(0,2).join(' · ') || 'Empty trade'}${details.length > 2 ? ' ...' : ''}</div>
-      <button class="tle-dismiss" onclick="event.stopPropagation();dismissTradeLog(${entry.id})" title="Dismiss">✕</button>
+      ${warning}
     </div>`;
   }).join('');
 }
@@ -4274,7 +4328,12 @@ function showTradeLogDetail(entryId) {
   if(!fromP || !toP) return;
 
   const statusClass = entry.status;
-  const statusText = entry.status === 'pending' ? 'Pending' : entry.status === 'accepted' ? 'Accepted' : 'Declined';
+  const isPending = entry.status === 'pending';
+  const invalid = isPending && !isTradeValid(entry);
+  const statusText =
+    entry.status === 'pending' ? (invalid ? 'Unable' : 'Pending') :
+    entry.status === 'accepted' ? 'Accepted' :
+    entry.status === 'cancelled' ? 'Cancelled' : 'Declined';
 
   function propList(indices) {
     if(indices.length === 0) return '<div style="color:#555;font-size:0.9em">None</div>';
@@ -4311,13 +4370,16 @@ function showTradeLogDetail(entryId) {
           </div>
         </div>
       </div>
+      ${invalid ? '<div class="trade-invalid-msg">Trade is unable to be made</div>' : ''}
       <div class="trade-footer">
-        ${entry.status === 'pending' && entry.to === myPlayerIndex ? `
+        ${isPending && entry.to === myPlayerIndex ? `
           <button class="action-btn btn-pay" onclick="reOpenPendingTrade(${entry.id})">Decline</button>
-          <button class="action-btn btn-buy" onclick="reOpenPendingTrade(${entry.id}, true)">Accept</button>
+          <button class="action-btn btn-buy" onclick="reOpenPendingTrade(${entry.id}, true)" ${invalid ? 'disabled' : ''}>Accept</button>
+        ` : isPending && entry.from === myPlayerIndex ? `
+          <button class="action-btn btn-end" onclick="closeTradeModal()">Close</button>
+          <button class="action-btn btn-pay" onclick="cancelOutgoingTrade(${entry.id})">Cancel Trade</button>
         ` : `
           <button class="action-btn btn-end" onclick="closeTradeModal()">Close</button>
-          <button class="action-btn btn-mortgage" onclick="dismissTradeLog(${entry.id});closeTradeModal()">Dismiss</button>
         `}
       </div>
     </div>`;
@@ -4343,6 +4405,29 @@ function dismissTradeLog(entryId) {
   tradeLog = tradeLog.filter(e => e.id !== entryId);
   renderTradeLog();
   updateTradeLogBadge();
+}
+
+// Proposer cancels their own pending outgoing trade.
+function cancelOutgoingTrade(entryId) {
+  const entry = tradeLog.find(e => e.id === entryId);
+  if(!entry || entry.status !== 'pending' || entry.from !== myPlayerIndex) return;
+  const trade = { from: entry.from, to: entry.to };
+  if(isHost) {
+    if(gameState.pendingTrade &&
+       gameState.pendingTrade.from === entry.from &&
+       gameState.pendingTrade.to === entry.to) {
+      gameState.pendingTrade = null;
+    }
+    addLog(`${gameState.players[entry.from].name} cancelled their trade with ${gameState.players[entry.to].name}`);
+    updateTradeLogStatus(trade, 'cancelled');
+    wsSend({ type:'tradeResolved', from: entry.from, to: entry.to, status: 'cancelled' });
+    broadcastState();
+    renderGame();
+  } else {
+    wsSend({ type:'action', action:'tradeCancel', payload: { from: entry.from, to: entry.to } });
+    updateTradeLogStatus(trade, 'cancelled');
+  }
+  closeTradeModal();
 }
 
 function updateTradeLogStatus(trade, status) {
@@ -4554,10 +4639,14 @@ function handleTradeOffer(offer) {
 
 function showIncomingTrade(offer) {
   if(offer.to !== myPlayerIndex) return;
+  const isRefresh = pendingTrade &&
+                    pendingTrade.from === offer.from &&
+                    pendingTrade.to === offer.to;
   pendingTrade = offer;
-  // Add to receiving player's trade log
-  addTradeToLog(offer, 'pending');
+  // Add to receiving player's trade log only the first time
+  if(!isRefresh) addTradeToLog(offer, 'pending');
 
+  const invalid = !isTradeValid(offer);
   const from = gameState.players[offer.from];
   const to = gameState.players[offer.to];
   const modal = document.getElementById('trade-modal');
@@ -4595,9 +4684,10 @@ function showIncomingTrade(offer) {
           </div>
         </div>
       </div>
+      ${invalid ? '<div class="trade-invalid-msg">Trade is unable to be made</div>' : ''}
       <div class="trade-footer">
         <button class="action-btn btn-pay" onclick="respondToTrade(false)">Decline</button>
-        <button class="action-btn btn-buy" onclick="respondToTrade(true)">Accept</button>
+        <button class="action-btn btn-buy" onclick="respondToTrade(true)" ${invalid ? 'disabled' : ''}>Accept</button>
       </div>
     </div>`;
   modal.classList.add('show');
@@ -4605,6 +4695,8 @@ function showIncomingTrade(offer) {
 
 function respondToTrade(accept) {
   if(!pendingTrade) return;
+  // Block acceptance of an unfulfillable trade.
+  if(accept && !isTradeValid(pendingTrade)) return;
 
   const response = {
     accepted: accept,
