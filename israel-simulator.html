@@ -380,7 +380,7 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   position: absolute; z-index: 10; width: 36px; height: 36px; border-radius: 50%;
   border: 3px solid rgba(255,255,255,0.85);
   box-shadow: 0 3px 8px rgba(0,0,0,0.6), 0 0 18px var(--token-color, #e94560);
-  transition: left 0.18s linear, top 0.18s linear;
+  transition: left 0.08s linear, top 0.08s linear;
   pointer-events: none;
   background: var(--token-color, #e94560);
   will-change: left, top;
@@ -2698,7 +2698,7 @@ function renderTokens() {
 
         if(steps.length > 0 && steps.length <= 14) {
           token._stepping = true;
-          const STEP_DELAY = 180;
+          const STEP_DELAY = 80;
           steps.forEach((cellIdx, i) => {
             setTimeout(() => {
               const coords = posToCoords(cellIdx);
