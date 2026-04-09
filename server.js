@@ -17,6 +17,7 @@ db.exec(`
     salt TEXT NOT NULL,
     display_name TEXT NOT NULL,
     preferred_color TEXT DEFAULT '',
+    profile_picture TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now'))
   );
   CREATE TABLE IF NOT EXISTS sessions (
@@ -29,13 +30,17 @@ db.exec(`
   );
 `);
 
+// Migration: add profile_picture column if missing (for existing DBs)
+try { db.exec("ALTER TABLE users ADD COLUMN profile_picture TEXT DEFAULT ''"); } catch {}
+
 // Prepared statements
 const stmts = {
   findUserByUsername: db.prepare('SELECT * FROM users WHERE username = ?'),
   insertUser: db.prepare('INSERT INTO users (username, password_hash, salt, display_name) VALUES (?, ?, ?, ?)'),
   insertSession: db.prepare("INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, datetime('now', '+30 days'))"),
-  findSession: db.prepare("SELECT s.*, u.username, u.display_name, u.preferred_color FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.token = ? AND s.expires_at > datetime('now')"),
+  findSession: db.prepare("SELECT s.*, u.username, u.display_name, u.preferred_color, u.profile_picture FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.token = ? AND s.expires_at > datetime('now')"),
   updateProfile: db.prepare('UPDATE users SET display_name = ?, preferred_color = ? WHERE id = ?'),
+  updateProfilePicture: db.prepare('UPDATE users SET profile_picture = ? WHERE id = ?'),
   deleteSession: db.prepare('DELETE FROM sessions WHERE token = ?'),
 };
 
@@ -108,7 +113,7 @@ const server = http.createServer(async (req, res) => {
     const result = stmts.insertUser.run(username, hash, salt, displayName);
     const token = generateToken();
     stmts.insertSession.run(result.lastInsertRowid, token);
-    return jsonResponse(res, 201, { token, username, displayName, preferredColor: '' });
+    return jsonResponse(res, 201, { token, username, displayName, preferredColor: '', profilePicture: '' });
   }
 
   if (req.method === 'POST' && req.url === '/api/login') {
@@ -127,7 +132,7 @@ const server = http.createServer(async (req, res) => {
     }
     const token = generateToken();
     stmts.insertSession.run(user.id, token);
-    return jsonResponse(res, 200, { token, username: user.username, displayName: user.display_name, preferredColor: user.preferred_color });
+    return jsonResponse(res, 200, { token, username: user.username, displayName: user.display_name, preferredColor: user.preferred_color, profilePicture: user.profile_picture || '' });
   }
 
   if (req.method === 'GET' && req.url === '/api/me') {
@@ -135,7 +140,7 @@ const server = http.createServer(async (req, res) => {
     if (!session) {
       return jsonResponse(res, 401, { error: 'Not authenticated' });
     }
-    return jsonResponse(res, 200, { username: session.username, displayName: session.display_name, preferredColor: session.preferred_color });
+    return jsonResponse(res, 200, { username: session.username, displayName: session.display_name, preferredColor: session.preferred_color, profilePicture: session.profile_picture || '' });
   }
 
   if (req.method === 'POST' && req.url === '/api/update-profile') {
@@ -149,6 +154,21 @@ const server = http.createServer(async (req, res) => {
     const preferredColor = body.preferredColor || session.preferred_color || '';
     stmts.updateProfile.run(displayName, preferredColor, session.user_id);
     return jsonResponse(res, 200, { displayName, preferredColor });
+  }
+
+  if (req.method === 'POST' && req.url === '/api/upload-picture') {
+    const session = getUserFromToken(req);
+    if (!session) {
+      return jsonResponse(res, 401, { error: 'Not authenticated' });
+    }
+    const body = await readBody(req);
+    if (!body || !body.picture) return jsonResponse(res, 400, { error: 'No picture provided' });
+    // Validate it's a data URI and not too large (max ~500KB base64)
+    if (!body.picture.startsWith('data:image/') || body.picture.length > 700000) {
+      return jsonResponse(res, 400, { error: 'Invalid image or too large (max 500KB)' });
+    }
+    stmts.updateProfilePicture.run(body.picture, session.user_id);
+    return jsonResponse(res, 200, { profilePicture: body.picture });
   }
 
   if (req.method === 'POST' && req.url === '/api/logout') {
@@ -261,6 +281,7 @@ wss.on('connection', (ws) => {
           type: 'join',
           name: data.name,
           emoji: data.emoji,
+          profilePicture: data.profilePicture || '',
           socketId: ws.socketId
         }));
         ws.send(JSON.stringify({ type: 'joined' }));

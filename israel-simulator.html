@@ -56,6 +56,23 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 .auth-logged-in strong { color: #e94560; }
 .auth-logged-in a { color: #7a7a9a; cursor: pointer; text-decoration: underline; margin-left: 8px; font-size: 0.85em; }
 .auth-logged-in a:hover { color: #e94560; }
+.pfp-upload-area {
+  display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 12px;
+}
+.pfp-preview {
+  width: 64px; height: 64px; border-radius: 50%; border: 2px solid rgba(233,69,96,0.3);
+  background: rgba(255,255,255,0.05); overflow: hidden; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: border-color 0.3s;
+}
+.pfp-preview:hover { border-color: #e94560; }
+.pfp-preview img { width: 100%; height: 100%; object-fit: cover; }
+.pfp-preview .pfp-placeholder { color: #555; font-size: 0.75em; text-align: center; }
+.pfp-upload-btn {
+  font-size: 0.8em; color: #7a7a9a; cursor: pointer; text-decoration: underline;
+}
+.pfp-upload-btn:hover { color: #e94560; }
+.lobby-pfp { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(233,69,96,0.3); }
+.pc-pfp { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; }
 
 /* ============ LOBBY ============ */
 #lobby {
@@ -1200,7 +1217,7 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 <body>
 
 <!-- =============== AUTH SCREEN =============== -->
-<div id="auth-screen">
+<div id="auth-screen" style="display:none">
   <h1>ISRAEL SIMULATOR</h1>
   <h2>A Booster Cookie Economy</h2>
   <div style="position:relative;z-index:1;width:80px;height:2px;background:linear-gradient(90deg,transparent,rgba(233,69,96,0.5),transparent);margin:-8px 0 8px;border-radius:1px"></div>
@@ -1219,6 +1236,13 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     </div>
 
     <div id="auth-register-form" style="display:none">
+      <div class="pfp-upload-area">
+        <div class="pfp-preview" id="reg-pfp-preview" onclick="document.getElementById('reg-pfp-input').click()">
+          <span class="pfp-placeholder">Click to<br>upload photo</span>
+        </div>
+        <input type="file" id="reg-pfp-input" accept="image/*" style="display:none" onchange="handlePfpUpload(this, 'reg-pfp-preview')">
+        <span class="pfp-upload-btn" onclick="document.getElementById('reg-pfp-input').click()">Profile Picture (optional)</span>
+      </div>
       <input class="lobby-input" id="reg-username" placeholder="Username (letters, numbers, _)" maxlength="20" autocomplete="username">
       <input class="lobby-input" id="reg-display-name" placeholder="Display Name" maxlength="16">
       <input class="lobby-input" id="reg-password" placeholder="Password (4+ chars)" type="password" maxlength="64" autocomplete="new-password">
@@ -1228,11 +1252,11 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     </div>
   </div>
 
-  <div class="auth-skip" onclick="skipAuth()">Continue as Guest</div>
+  <div class="auth-skip" onclick="skipAuth()">Back to Lobby</div>
 </div>
 
 <!-- =============== LOBBY SCREEN =============== -->
-<div id="lobby" style="display:none">
+<div id="lobby">
   <h1>ISRAEL SIMULATOR</h1>
   <h2>A Booster Cookie Economy</h2>
   <div style="position:relative;z-index:1;width:80px;height:2px;background:linear-gradient(90deg,transparent,rgba(233,69,96,0.5),transparent);margin:-8px 0 8px;border-radius:1px"></div>
@@ -1441,6 +1465,12 @@ async function authRegister() {
     if (!res.ok) { errEl.textContent = data.error || 'Registration failed'; return; }
     localStorage.setItem('authToken', data.token);
     currentUser = data;
+    // Upload profile picture if one was selected
+    if (pendingPfpData) {
+      await uploadProfilePicture(data.token, pendingPfpData);
+      currentUser.profilePicture = pendingPfpData;
+      pendingPfpData = '';
+    }
     enterLobbyFromAuth();
   } catch (e) { errEl.textContent = 'Connection error'; }
   finally { btn.disabled = false; btn.textContent = 'Create Account'; }
@@ -1448,7 +1478,14 @@ async function authRegister() {
 
 function skipAuth() {
   currentUser = null;
-  enterLobbyFromAuth();
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('lobby').style.display = '';
+  updateLobbyAccountInfo();
+}
+
+function showAuthScreen() {
+  document.getElementById('lobby').style.display = 'none';
+  document.getElementById('auth-screen').style.display = '';
 }
 
 async function checkExistingSession() {
@@ -1463,15 +1500,53 @@ async function checkExistingSession() {
   } catch { return false; }
 }
 
+function updateLobbyAccountInfo() {
+  const acctInfo = document.getElementById('lobby-account-info');
+  if (!acctInfo) return;
+  if (currentUser) {
+    const pfpHtml = currentUser.profilePicture
+      ? '<img src="' + currentUser.profilePicture + '" class="lobby-pfp" onclick="document.getElementById(\'lobby-pfp-input\').click()" style="cursor:pointer" title="Click to change">'
+      : '<div class="pfp-preview" style="width:36px;height:36px;display:inline-flex" onclick="document.getElementById(\'lobby-pfp-input\').click()" title="Upload photo"><span class="pfp-placeholder" style="font-size:0.6em">+</span></div>';
+    acctInfo.innerHTML = '<div class="auth-logged-in" style="display:flex;align-items:center;justify-content:center;gap:8px">'
+      + pfpHtml
+      + '<input type="file" id="lobby-pfp-input" accept="image/*" style="display:none" onchange="handleLobbyPfpChange(this)">'
+      + '<span>Logged in as <strong>' + currentUser.displayName + '</strong></span>'
+      + '<a onclick="authLogout()">Logout</a></div>';
+  } else {
+    acctInfo.innerHTML = '<div class="auth-logged-in"><a onclick="showAuthScreen()" style="color:#e94560;font-size:1em;cursor:pointer">Login / Register</a></div>';
+  }
+}
+
+function handleLobbyPfpChange(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 500000) { alert('Image too large (max 500KB)'); return; }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128; canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      const size = Math.min(img.width, img.height);
+      ctx.drawImage(img, (img.width - size) / 2, (img.height - size) / 2, size, size, 0, 0, 128, 128);
+      const resized = canvas.toDataURL('image/jpeg', 0.8);
+      currentUser.profilePicture = resized;
+      uploadProfilePicture(currentUser.token, resized);
+      updateLobbyAccountInfo();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 function enterLobbyFromAuth() {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('lobby').style.display = '';
   // Pre-fill lobby with account info
-  const acctInfo = document.getElementById('lobby-account-info');
   if (currentUser) {
     const nameInput = document.getElementById('inp-name');
     if (nameInput && currentUser.displayName) nameInput.value = currentUser.displayName;
-    // Pre-select preferred color if set
     if (currentUser.preferredColor) {
       const idx = typeof PLAYER_COLORS !== 'undefined' ? PLAYER_COLORS.indexOf(currentUser.preferredColor) : -1;
       if (idx >= 0) {
@@ -1482,10 +1557,8 @@ function enterLobbyFromAuth() {
         }, 50);
       }
     }
-    if (acctInfo) acctInfo.innerHTML = '<div class="auth-logged-in">Logged in as <strong>' + currentUser.displayName + '</strong> (@' + currentUser.username + ')<a onclick="authLogout()">Logout</a></div>';
-  } else {
-    if (acctInfo) acctInfo.innerHTML = '<div class="auth-logged-in">Playing as <strong>Guest</strong><a onclick="authLogout()">Switch Account</a></div>';
   }
+  updateLobbyAccountInfo();
 }
 
 async function authLogout() {
@@ -1510,12 +1583,69 @@ function savePreferencesToAccount() {
   }).catch(() => {});
 }
 
-// On page load: check for existing session
+// ── Profile Picture Handling ──
+let pendingPfpData = ''; // base64 data URI staged during registration
+
+function handlePfpUpload(input, previewId) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 500000) { alert('Image too large (max 500KB). Please use a smaller image.'); return; }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUri = e.target.result;
+    // Resize to 128x128 to keep it small
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128; canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      // Crop to square center
+      const size = Math.min(img.width, img.height);
+      const sx = (img.width - size) / 2;
+      const sy = (img.height - size) / 2;
+      ctx.drawImage(img, sx, sy, size, size, 0, 0, 128, 128);
+      const resized = canvas.toDataURL('image/jpeg', 0.8);
+      pendingPfpData = resized;
+      const preview = document.getElementById(previewId);
+      if (preview) preview.innerHTML = '<img src="' + resized + '">';
+    };
+    img.src = dataUri;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function uploadProfilePicture(token, pictureData) {
+  if (!pictureData || !token) return;
+  try {
+    await fetch('/api/upload-picture', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ picture: pictureData })
+    });
+  } catch {}
+}
+
+// On page load: check for existing session, lobby is default
 document.addEventListener('DOMContentLoaded', async () => {
   const hasSession = await checkExistingSession();
   if (hasSession) {
-    enterLobbyFromAuth();
+    // Auto-fill name/color from account
+    if (currentUser) {
+      const nameInput = document.getElementById('inp-name');
+      if (nameInput && currentUser.displayName) nameInput.value = currentUser.displayName;
+      if (currentUser.preferredColor) {
+        const idx = typeof PLAYER_COLORS !== 'undefined' ? PLAYER_COLORS.indexOf(currentUser.preferredColor) : -1;
+        if (idx >= 0) {
+          selectedEmoji = currentUser.preferredColor;
+          setTimeout(() => {
+            const dots = document.querySelectorAll('#emoji-picker .emoji-opt');
+            dots.forEach((d, i) => { d.classList.toggle('selected', i === idx); });
+          }, 50);
+        }
+      }
+    }
   }
+  updateLobbyAccountInfo();
   // Enter key support for auth forms
   document.getElementById('auth-password')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') authLogin(); });
   document.getElementById('reg-password2')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') authRegister(); });
@@ -1817,7 +1947,7 @@ function createRoom() {
       reconnectAttempts = 0;
       clearTimeout(wsTimeout);
       gameState = createInitialState();
-      addPlayerToState(getPlayerName(), selectedEmoji);
+      addPlayerToState(getPlayerName(), selectedEmoji, currentUser?.profilePicture || '');
       myPlayerIndex = 0;
       gameState.phase = 'waiting';
       showGameScreenWaiting();
@@ -1874,7 +2004,7 @@ function startLocalWaiting() {
   isHost = true;
   if(!roomCode || roomCode === 'LOCAL') roomCode = generateRoomCode();
   gameState = createInitialState();
-  addPlayerToState(getPlayerName(), selectedEmoji);
+  addPlayerToState(getPlayerName(), selectedEmoji, currentUser?.profilePicture || '');
   myPlayerIndex = 0;
   gameState.phase = 'waiting';
   showGameScreenWaiting();
@@ -2018,7 +2148,7 @@ function joinRoom() {
   ws = new WebSocket(`${protocol}//${location.host}`);
 
   ws.onopen = () => {
-    ws.send(JSON.stringify({ type: 'joinRoom', roomCode, name: getPlayerName(), clientId: myClientId }));
+    ws.send(JSON.stringify({ type: 'joinRoom', roomCode, name: getPlayerName(), clientId: myClientId, profilePicture: currentUser?.profilePicture || '' }));
   };
 
   ws.onmessage = (e) => {
@@ -2178,7 +2308,7 @@ function handleHostMessage(data) {
   if(data.type === 'join') {
     // Don't add player yet — send taken colors so guest can pick
     if(!pendingGuests) pendingGuests = {};
-    pendingGuests[data.socketId] = { name: data.name, socketId: data.socketId };
+    pendingGuests[data.socketId] = { name: data.name, socketId: data.socketId, profilePicture: data.profilePicture || '' };
     const takenColors = gameState.players.map(p => p.emoji);
     wsSend({ type:'pickColor', takenColors, _targetSocketId: data.socketId });
   }
@@ -2187,7 +2317,7 @@ function handleHostMessage(data) {
     const pending = pendingGuests && pendingGuests[socketId];
     if(!pending) return;
     delete pendingGuests[socketId];
-    const idx = addPlayerToState(pending.name, data.color);
+    const idx = addPlayerToState(pending.name, data.color, pending.profilePicture || '');
     socketIdToPlayerIdx[socketId] = idx;
     playerIdxToSocketId[idx] = socketId;
     // Tell this specific guest their index
@@ -2346,9 +2476,10 @@ function createInitialState() {
   };
 }
 
-function addPlayerToState(name, emoji) {
+function addPlayerToState(name, emoji, profilePicture) {
   gameState.players.push({
     name, emoji,
+    profilePicture: profilePicture || '',
     money: 1500,
     position: 0,
     properties: [],
@@ -2821,7 +2952,7 @@ function renderPlayers() {
     card.style.borderLeft = `4px solid ${playerColor}`;
 
     card.innerHTML = `
-      <div class="pc-emoji"><div style="width:28px;height:28px;border-radius:50%;background:${playerColor};border:2px solid rgba(255,255,255,0.6);box-shadow:0 0 8px ${playerColor}"></div></div>
+      <div class="pc-emoji">${p.profilePicture ? `<img src="${p.profilePicture}" class="pc-pfp">` : `<div style="width:28px;height:28px;border-radius:50%;background:${playerColor};border:2px solid rgba(255,255,255,0.6);box-shadow:0 0 8px ${playerColor}"></div>`}</div>
       <div class="pc-details">
         <div class="pc-name" style="display:flex;align-items:center">
           <span>${p.name}${i === myPlayerIndex ? '<span class="pc-you">YOU</span>' : ''}</span>
