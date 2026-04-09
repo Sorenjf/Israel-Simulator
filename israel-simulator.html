@@ -11,6 +11,52 @@
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0a0a1a; color: #e0e0e0; overflow: hidden; height: 100vh; }
 
+/* ============ AUTH SCREEN ============ */
+#auth-screen {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100vh; gap: 20px;
+  background: radial-gradient(ellipse at 50% 0%, #1a1040 0%, #0d0d24 40%, #070714 100%);
+  position: relative; overflow: hidden;
+}
+#auth-screen::before {
+  content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+  background: conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(233,69,96,0.03) 60deg, transparent 120deg, rgba(83,52,131,0.03) 180deg, transparent 240deg, rgba(233,69,96,0.03) 300deg, transparent 360deg);
+  animation: rotateBg 30s linear infinite; pointer-events: none;
+}
+#auth-screen h1 {
+  font-family: 'Orbitron', sans-serif; font-size: 3.2em; font-weight: 900;
+  background: linear-gradient(135deg, #e94560 0%, #ff6b81 40%, #e94560 60%, #c0392b 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  text-shadow: none; letter-spacing: 3px; position: relative; z-index: 1;
+  filter: drop-shadow(0 0 30px rgba(233,69,96,0.4));
+}
+#auth-screen h2 {
+  font-family: 'Rajdhani', sans-serif; font-size: 1.15em; color: #7a7a9a; margin-top: -10px;
+  letter-spacing: 4px; text-transform: uppercase; font-weight: 400; position: relative; z-index: 1;
+}
+.auth-box {
+  background: linear-gradient(135deg, rgba(20,16,40,0.8) 0%, rgba(15,12,30,0.9) 100%);
+  border: 1px solid rgba(233,69,96,0.15); backdrop-filter: blur(20px);
+  border-radius: 20px; padding: 32px; width: 400px; text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+  position: relative; z-index: 1;
+}
+.auth-box h3 { margin-bottom: 20px; color: #e94560; font-family: 'Orbitron', sans-serif; font-size: 1.1em; letter-spacing: 1px; }
+.auth-toggle { display: flex; gap: 0; margin-bottom: 20px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(233,69,96,0.2); }
+.auth-toggle button {
+  flex: 1; padding: 12px; border: none; cursor: pointer; font-size: 14px; font-weight: 700;
+  font-family: 'Rajdhani', sans-serif; letter-spacing: 1px; text-transform: uppercase;
+  background: rgba(255,255,255,0.03); color: #7a7a9a; transition: all 0.3s;
+}
+.auth-toggle button.active { background: linear-gradient(135deg, #e94560 0%, #c0392b 100%); color: #fff; }
+.auth-error { color: #e94560; font-size: 0.85em; margin-top: 8px; min-height: 1.2em; }
+.auth-skip { margin-top: 12px; color: #555; font-size: 0.85em; cursor: pointer; text-decoration: underline; position: relative; z-index: 1; }
+.auth-skip:hover { color: #888; }
+.auth-logged-in { color: #7a7a9a; font-size: 0.9em; position: relative; z-index: 1; }
+.auth-logged-in strong { color: #e94560; }
+.auth-logged-in a { color: #7a7a9a; cursor: pointer; text-decoration: underline; margin-left: 8px; font-size: 0.85em; }
+.auth-logged-in a:hover { color: #e94560; }
+
 /* ============ LOBBY ============ */
 #lobby {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -1153,8 +1199,40 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 </head>
 <body>
 
+<!-- =============== AUTH SCREEN =============== -->
+<div id="auth-screen">
+  <h1>ISRAEL SIMULATOR</h1>
+  <h2>A Booster Cookie Economy</h2>
+  <div style="position:relative;z-index:1;width:80px;height:2px;background:linear-gradient(90deg,transparent,rgba(233,69,96,0.5),transparent);margin:-8px 0 8px;border-radius:1px"></div>
+
+  <div class="auth-box">
+    <div class="auth-toggle">
+      <button id="auth-tab-login" class="active" onclick="switchAuthTab('login')">Login</button>
+      <button id="auth-tab-register" onclick="switchAuthTab('register')">Register</button>
+    </div>
+
+    <div id="auth-login-form">
+      <input class="lobby-input" id="auth-username" placeholder="Username" maxlength="20" autocomplete="username">
+      <input class="lobby-input" id="auth-password" placeholder="Password" type="password" maxlength="64" autocomplete="current-password">
+      <button class="lobby-btn btn-create" onclick="authLogin()" id="auth-login-btn">Login</button>
+      <div class="auth-error" id="auth-login-error"></div>
+    </div>
+
+    <div id="auth-register-form" style="display:none">
+      <input class="lobby-input" id="reg-username" placeholder="Username (letters, numbers, _)" maxlength="20" autocomplete="username">
+      <input class="lobby-input" id="reg-display-name" placeholder="Display Name" maxlength="16">
+      <input class="lobby-input" id="reg-password" placeholder="Password (4+ chars)" type="password" maxlength="64" autocomplete="new-password">
+      <input class="lobby-input" id="reg-password2" placeholder="Confirm Password" type="password" maxlength="64" autocomplete="new-password">
+      <button class="lobby-btn btn-create" onclick="authRegister()" id="auth-register-btn">Create Account</button>
+      <div class="auth-error" id="auth-register-error"></div>
+    </div>
+  </div>
+
+  <div class="auth-skip" onclick="skipAuth()">Continue as Guest</div>
+</div>
+
 <!-- =============== LOBBY SCREEN =============== -->
-<div id="lobby">
+<div id="lobby" style="display:none">
   <h1>ISRAEL SIMULATOR</h1>
   <h2>A Booster Cookie Economy</h2>
   <div style="position:relative;z-index:1;width:80px;height:2px;background:linear-gradient(90deg,transparent,rgba(233,69,96,0.5),transparent);margin:-8px 0 8px;border-radius:1px"></div>
@@ -1190,6 +1268,7 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       <div style="margin-top:6px;font-size:0.75em;color:#666" id="pnp-status">Add at least 2 players to start</div>
     </div>
     <div id="lobby-status" style="margin-top:10px"></div>
+    <div id="lobby-account-info" style="margin-top:12px"></div>
   </div>
 
   <div class="lobby-box" id="lobby-room" style="display:none">
@@ -1304,6 +1383,144 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 
 <script src="images.js"></script>
 <script>
+// =============================================
+// AUTH SYSTEM
+// =============================================
+let currentUser = null; // { token, username, displayName, preferredColor }
+
+function switchAuthTab(tab) {
+  document.getElementById('auth-login-form').style.display = tab === 'login' ? '' : 'none';
+  document.getElementById('auth-register-form').style.display = tab === 'register' ? '' : 'none';
+  document.getElementById('auth-tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('auth-tab-register').classList.toggle('active', tab === 'register');
+  document.getElementById('auth-login-error').textContent = '';
+  document.getElementById('auth-register-error').textContent = '';
+}
+
+async function authLogin() {
+  const username = document.getElementById('auth-username').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const errEl = document.getElementById('auth-login-error');
+  errEl.textContent = '';
+  if (!username || !password) { errEl.textContent = 'Please enter username and password'; return; }
+  const btn = document.getElementById('auth-login-btn');
+  btn.disabled = true; btn.textContent = 'Logging in...';
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Login failed'; return; }
+    localStorage.setItem('authToken', data.token);
+    currentUser = data;
+    enterLobbyFromAuth();
+  } catch (e) { errEl.textContent = 'Connection error'; }
+  finally { btn.disabled = false; btn.textContent = 'Login'; }
+}
+
+async function authRegister() {
+  const username = document.getElementById('reg-username').value.trim();
+  const displayName = document.getElementById('reg-display-name').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const password2 = document.getElementById('reg-password2').value;
+  const errEl = document.getElementById('auth-register-error');
+  errEl.textContent = '';
+  if (!username || !password) { errEl.textContent = 'Please fill in all fields'; return; }
+  if (password !== password2) { errEl.textContent = 'Passwords do not match'; return; }
+  const btn = document.getElementById('auth-register-btn');
+  btn.disabled = true; btn.textContent = 'Creating...';
+  try {
+    const res = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, displayName: displayName || username })
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Registration failed'; return; }
+    localStorage.setItem('authToken', data.token);
+    currentUser = data;
+    enterLobbyFromAuth();
+  } catch (e) { errEl.textContent = 'Connection error'; }
+  finally { btn.disabled = false; btn.textContent = 'Create Account'; }
+}
+
+function skipAuth() {
+  currentUser = null;
+  enterLobbyFromAuth();
+}
+
+async function checkExistingSession() {
+  const token = localStorage.getItem('authToken');
+  if (!token) return false;
+  try {
+    const res = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!res.ok) { localStorage.removeItem('authToken'); return false; }
+    const data = await res.json();
+    currentUser = { token, ...data };
+    return true;
+  } catch { return false; }
+}
+
+function enterLobbyFromAuth() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('lobby').style.display = '';
+  // Pre-fill lobby with account info
+  const acctInfo = document.getElementById('lobby-account-info');
+  if (currentUser) {
+    const nameInput = document.getElementById('inp-name');
+    if (nameInput && currentUser.displayName) nameInput.value = currentUser.displayName;
+    // Pre-select preferred color if set
+    if (currentUser.preferredColor) {
+      const idx = typeof PLAYER_COLORS !== 'undefined' ? PLAYER_COLORS.indexOf(currentUser.preferredColor) : -1;
+      if (idx >= 0) {
+        selectedEmoji = currentUser.preferredColor;
+        setTimeout(() => {
+          const dots = document.querySelectorAll('#emoji-picker .emoji-opt');
+          dots.forEach((d, i) => { d.classList.toggle('selected', i === idx); });
+        }, 50);
+      }
+    }
+    if (acctInfo) acctInfo.innerHTML = '<div class="auth-logged-in">Logged in as <strong>' + currentUser.displayName + '</strong> (@' + currentUser.username + ')<a onclick="authLogout()">Logout</a></div>';
+  } else {
+    if (acctInfo) acctInfo.innerHTML = '<div class="auth-logged-in">Playing as <strong>Guest</strong><a onclick="authLogout()">Switch Account</a></div>';
+  }
+}
+
+async function authLogout() {
+  const token = localStorage.getItem('authToken');
+  if (token) {
+    try { await fetch('/api/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } }); } catch {}
+  }
+  localStorage.removeItem('authToken');
+  currentUser = null;
+  document.getElementById('lobby').style.display = 'none';
+  document.getElementById('auth-screen').style.display = '';
+}
+
+// Save preferences when entering a game
+function savePreferencesToAccount() {
+  if (!currentUser || !currentUser.token) return;
+  const name = document.getElementById('inp-name')?.value?.trim();
+  fetch('/api/update-profile', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentUser.token },
+    body: JSON.stringify({ displayName: name || currentUser.displayName, preferredColor: selectedEmoji || '' })
+  }).catch(() => {});
+}
+
+// On page load: check for existing session
+document.addEventListener('DOMContentLoaded', async () => {
+  const hasSession = await checkExistingSession();
+  if (hasSession) {
+    enterLobbyFromAuth();
+  }
+  // Enter key support for auth forms
+  document.getElementById('auth-password')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') authLogin(); });
+  document.getElementById('reg-password2')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') authRegister(); });
+});
+
 // Booster Cookie icon helper
 const COOKIE_SRC = (typeof CELL_IMAGES !== 'undefined' && CELL_IMAGES['boostercookie']) ? CELL_IMAGES['boostercookie'] : '';
 const COOKIE_ICON = COOKIE_SRC ? `<img class="cookie-img" src="${COOKIE_SRC}" alt="🍪">` : '🍪';
@@ -1554,6 +1771,7 @@ function setStatus(msg) {
 
 // HOST: Create Room (tries WebSocket, falls back to local)
 function createRoom() {
+  savePreferencesToAccount();
   isHost = true;
   roomCode = generateRoomCode();
   setStatus('Creating room...');
@@ -1732,6 +1950,7 @@ function renderPnpPlayers() {
 }
 
 function startPassAndPlay() {
+  savePreferencesToAccount();
   if(pnpPlayers.length < 2) return;
   isHost = true;
   isPassAndPlay = true;
@@ -1788,6 +2007,7 @@ function dismissPassScreen() {
 
 // GUEST: Join Room
 function joinRoom() {
+  savePreferencesToAccount();
   const code = document.getElementById('inp-room').value.trim().toUpperCase();
   if (!code) return;
   roomCode = code;

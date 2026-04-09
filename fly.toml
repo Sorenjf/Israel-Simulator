@@ -3,6 +3,13 @@ primary_region = 'sjc'
 
 [build]
 
+[mounts]
+  source = "data"
+  destination = "/data"
+
+[env]
+  DB_PATH = "/data/israel-simulator.db"
+
 [http_service]
   internal_port = 3000
   force_https = true
