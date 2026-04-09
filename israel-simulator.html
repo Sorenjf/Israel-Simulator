@@ -214,46 +214,24 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 .cell.right .house-row { left: 1px; top: 50%; transform: translateY(-50%); flex-direction: column; }
 
 .house-piece {
-  width: 11px; height: 11px; border-radius: 2px;
-  background: linear-gradient(135deg, #2ecc71, #1e8449);
-  border: 1px solid rgba(255,255,255,0.5);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  width: 14px; height: 14px;
   position: relative;
   display: flex; align-items: center; justify-content: center;
-  color: #fff; font-size: 7px; font-weight: 900;
-  font-family: 'Rajdhani', sans-serif;
-  text-shadow: 0 1px 1px rgba(0,0,0,0.6);
 }
-.house-piece::after {
-  content: ''; position: absolute; top: -4px; left: 0;
-  width: 0; height: 0;
-  border-left: 5.5px solid transparent; border-right: 5.5px solid transparent;
-  border-bottom: 5px solid #1e8449;
-  filter: drop-shadow(0 -1px 1px rgba(0,0,0,0.3));
+.house-piece img {
+  width: 100%; height: 100%; object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
 }
 .hotel-piece {
-  width: 16px; height: 13px; border-radius: 2px;
-  background: linear-gradient(135deg, #e74c3c, #c0392b);
-  border: 1px solid rgba(255,255,255,0.5);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.2);
+  width: 18px; height: 18px;
   position: relative;
   display: flex; align-items: center; justify-content: center;
-  color: #fff; font-size: 8px; font-weight: 900;
-  font-family: 'Rajdhani', sans-serif;
-  text-shadow: 0 1px 1px rgba(0,0,0,0.7);
 }
-.hotel-piece::after {
-  content: ''; position: absolute; top: -5px; left: 1px;
-  width: 0; height: 0;
-  border-left: 7px solid transparent; border-right: 7px solid transparent;
-  border-bottom: 5px solid #c0392b;
-  filter: drop-shadow(0 -1px 1px rgba(0,0,0,0.3));
+.hotel-piece img {
+  width: 100%; height: 100%; object-fit: contain;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
 }
-/* Left/right cells: rotate houses */
-.cell.left .house-piece, .cell.left .hotel-piece,
-.cell.right .house-piece, .cell.right .hotel-piece {
-  transform: rotate(90deg);
-}
+/* Left/right cells: no rotation needed for image-based pieces */
 /* Animation for new house placement */
 @keyframes housePop {
   0% { transform: scale(0); opacity: 0; }
@@ -2825,9 +2803,11 @@ function renderBoard() {
       const hr = document.createElement('div');
       hr.className = 'house-row';
       if(prop.houses >= 5) {
-        hr.innerHTML = '<div class="hotel-piece" title="Hotel">H</div>';
+        hr.innerHTML = '<div class="hotel-piece" title="Hotel"><img src="' + (typeof CELL_IMAGES !== 'undefined' && CELL_IMAGES['hotel'] ? CELL_IMAGES['hotel'] : '') + '" alt="H"></div>';
       } else {
-        hr.innerHTML = '<div class="house-piece" title="House">h</div>'.repeat(prop.houses);
+        for(let h = 0; h < prop.houses; h++) {
+          hr.innerHTML += '<div class="house-piece" title="House"><img src="' + (typeof CELL_IMAGES !== 'undefined' && CELL_IMAGES['house'] ? CELL_IMAGES['house'] : '') + '" alt="h"></div>';
+        }
       }
       // Append to the color bar if it exists, otherwise to the cell.
       // Do NOT override the color-bar's position — it must stay absolutely
