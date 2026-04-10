@@ -733,7 +733,7 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 .bankruptcy-btn-sidebar:hover { opacity: 1; }
 
 .trade-log-body {
-  min-height: 40px; max-height: 250px; overflow-y: auto; padding: 0;
+  min-height: 40px; max-height: 45vh; overflow-y: auto; padding: 0;
 }
 .trade-log-body::-webkit-scrollbar { width: 4px; }
 .trade-log-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
@@ -774,7 +774,7 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: linear-gradient(135deg, rgba(16,20,35,0.92) 0%, rgba(12,14,28,0.92) 100%);
   border: 1px solid rgba(255,255,255,0.05);
   border-radius: 14px; backdrop-filter: blur(12px); box-shadow: 0 4px 20px rgba(0,0,0,0.35);
-  overflow: hidden; max-height: 220px;
+  overflow: hidden; max-height: 340px;
 }
 #my-props-panel .mp-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -788,7 +788,7 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 #my-props-panel.collapsed .mp-toggle { transform: rotate(180deg); }
 #my-props-panel.collapsed .mp-body { display: none; }
 .mp-body {
-  max-height: 170px; overflow-y: auto; padding: 4px 0;
+  max-height: 290px; overflow-y: auto; padding: 4px 0;
 }
 .mp-body::-webkit-scrollbar { width: 4px; }
 .mp-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
@@ -2574,14 +2574,14 @@ function handleGuestMessage(data) {
   }
   if(data.type === 'state') {
     gameState = data.state;
-    // Show/hide card overlay for guests
-    if(gameState.cardDisplay) {
-      if(!cardOverlayDismissed) {
-        const cd = gameState.cardDisplay;
-        showCardOverlay(cd.playerName, cd.playerEmoji, cd.cardText, cd.deckType);
-      }
-    } else {
-      hideCardOverlay(); // also resets cardOverlayDismissed
+    // Show card overlay for guests when a new card appears
+    if(gameState.cardDisplay && !cardOverlayDismissed) {
+      const cd = gameState.cardDisplay;
+      showCardOverlay(cd.playerName, cd.playerEmoji, cd.cardText, cd.deckType);
+      // Auto-hide after delay (guest-side)
+      setTimeout(() => { hideCardOverlay(); }, 3000);
+      // Clear so we don't re-show on next state update
+      delete gameState.cardDisplay;
     }
     if(document.getElementById('game').style.display === 'flex') {
       if(gameState.phase === 'waiting') {
@@ -3491,11 +3491,6 @@ function renderActionPanel() {
 
   const me = gameState.players[myPlayerIndex];
 
-  // Hide buttons while a card is being displayed (unless this player dismissed it)
-  if(gameState.cardDisplay && !cardOverlayDismissed) {
-    msg.textContent = gameState.message || 'Drawing card...';
-    return;
-  }
 
   if(gameState.phase === 'roll') {
     if(me.inJail) {
@@ -3649,8 +3644,6 @@ function handlePlayerAction(playerIdx, action, payload) {
   // Block actions while dice are animating
   if(gameState.phase === 'rolling') return;
 
-  // Block actions while a card is being displayed (unless this player dismissed it)
-  if(gameState.cardDisplay && !cardOverlayDismissed) return;
 
   // Block rolls unless in roll phase (or postRoll with doubles for "Roll Again")
   if((action === 'roll' || action === 'rollJail') && gameState.phase !== 'roll') {
@@ -3890,22 +3883,18 @@ function doCard(pi, deck, deckType) {
   addLog(`🃏 ${p.emoji} ${p.name}: "${displayText}"`);
   gameState.message = plainText;
 
-  // Show the card to all players and broadcast immediately so everyone sees it
-  cardOverlayDismissed = false; // reset for new card
+  // Show the card overlay (purely visual — auto-hides after delay)
+  cardOverlayDismissed = false;
+  showCardOverlay(p.name, p.emoji, displayText, deckType);
+  setTimeout(() => { hideCardOverlay(); }, 3000);
+
+  // Apply the card effect immediately — don't make anyone wait
+  applyCardEffect(pi, card);
+  // Broadcast with cardDisplay so guests see the overlay, then clear it
   gameState.cardDisplay = { playerName: p.name, playerEmoji: p.emoji, cardText: displayText, deckType: deckType };
   if(isHost) { broadcastState(); }
+  delete gameState.cardDisplay;
   renderGame();
-  showCardOverlay(p.name, p.emoji, displayText, deckType);
-
-  // Apply the card effect after a delay so players can read it
-  const CARD_DELAY = 3000;
-  setTimeout(() => {
-    hideCardOverlay();
-    delete gameState.cardDisplay;
-    applyCardEffect(pi, card);
-    if(isHost) { broadcastState(); }
-    renderGame();
-  }, CARD_DELAY);
 }
 
 function applyCardEffect(pi, card) {
