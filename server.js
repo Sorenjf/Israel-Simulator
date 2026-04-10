@@ -182,7 +182,7 @@ const server = http.createServer(async (req, res) => {
 
   // ── Static Files ──
   if (req.url === '/' || req.url === '/index.html') {
-    fs.readFile(path.join(__dirname, 'israel-simulator.html'), (err, data) => {
+    fs.readFile(path.join(__dirname, 'promised-land.html'), (err, data) => {
       if (err) { res.writeHead(500); res.end('Error'); return; }
       res.writeHead(200, { 'Content-Type': 'text/html' });
       res.end(data);
@@ -377,7 +377,7 @@ wss.on('connection', (ws) => {
       const current = room.guests.get(ws.socketId);
       if (current !== ws) return;
       room.guests.delete(ws.socketId);
-      if (ws.clientId) room.guestClientIdToSocketId.delete(ws.clientId);
+      // Keep guestClientIdToSocketId mapping so the guest can rejoin after page refresh
       if (room.host && room.host.readyState === 1) {
         room.host.send(JSON.stringify({ type: 'guestDisconnected', socketId: ws.socketId }));
       }
@@ -398,5 +398,5 @@ wss.on('close', () => clearInterval(heartbeat));
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`Israel Simulator running at http://localhost:${PORT}`);
+  console.log(`Promised Land running at http://localhost:${PORT}`);
 });

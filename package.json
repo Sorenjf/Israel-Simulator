@@ -1,7 +1,7 @@
 {
-  "name": "israel-simulator",
+  "name": "promised-land",
   "version": "1.0.0",
-  "description": "Israel Simulator - Online Monopoly",
+  "description": "Promised Land - Online Monopoly",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

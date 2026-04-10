@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Israel Simulator WebSocket relay server + HTTP file server."""
+"""Promised Land WebSocket relay server + HTTP file server."""
 
 import asyncio
 import json
@@ -10,7 +10,7 @@ from websockets.http11 import Response
 from websockets.datastructures import Headers
 
 PORT = int(os.environ.get("PORT", 3000))
-HTML_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "israel-simulator.html")
+HTML_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "promised-land.html")
 
 # Room storage: room_code -> { "host": ws, "guests": { socket_id: ws } }
 rooms = {}
@@ -26,8 +26,8 @@ def new_socket_id():
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 STATIC_FILES = {
-    "/": ("israel-simulator.html", "text/html; charset=utf-8"),
-    "/index.html": ("israel-simulator.html", "text/html; charset=utf-8"),
+    "/": ("promised-land.html", "text/html; charset=utf-8"),
+    "/index.html": ("promised-land.html", "text/html; charset=utf-8"),
     "/images.js": ("images.js", "application/javascript; charset=utf-8"),
 }
 
@@ -169,7 +169,7 @@ async def main():
         process_request=process_request,
         max_size=2**20,  # 1MB max message
     ):
-        print(f"Israel Simulator running at http://localhost:{PORT}")
+        print(f"Promised Land running at http://localhost:{PORT}")
         print(f"Share your local IP address with friends on the same network,")
         print(f"or deploy to a hosting service for internet play.")
         await asyncio.Future()  # run forever
