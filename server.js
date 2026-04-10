@@ -18,6 +18,7 @@ db.exec(`
     display_name TEXT NOT NULL,
     preferred_color TEXT DEFAULT '',
     profile_picture TEXT DEFAULT '',
+    email TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now'))
   );
   CREATE TABLE IF NOT EXISTS sessions (
@@ -30,16 +31,17 @@ db.exec(`
   );
 `);
 
-// Migration: add profile_picture column if missing (for existing DBs)
+// Migrations for existing DBs
 try { db.exec("ALTER TABLE users ADD COLUMN profile_picture TEXT DEFAULT ''"); } catch {}
+try { db.exec("ALTER TABLE users ADD COLUMN email TEXT DEFAULT ''"); } catch {}
 
 // Prepared statements
 const stmts = {
   findUserByUsername: db.prepare('SELECT * FROM users WHERE username = ?'),
   insertUser: db.prepare('INSERT INTO users (username, password_hash, salt, display_name) VALUES (?, ?, ?, ?)'),
   insertSession: db.prepare("INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, datetime('now', '+30 days'))"),
-  findSession: db.prepare("SELECT s.*, u.username, u.display_name, u.preferred_color, u.profile_picture FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.token = ? AND s.expires_at > datetime('now')"),
-  updateProfile: db.prepare('UPDATE users SET display_name = ?, preferred_color = ? WHERE id = ?'),
+  findSession: db.prepare("SELECT s.*, u.username, u.display_name, u.preferred_color, u.profile_picture, u.email FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.token = ? AND s.expires_at > datetime('now')"),
+  updateProfile: db.prepare('UPDATE users SET display_name = ?, preferred_color = ?, email = ? WHERE id = ?'),
   updateProfilePicture: db.prepare('UPDATE users SET profile_picture = ? WHERE id = ?'),
   deleteSession: db.prepare('DELETE FROM sessions WHERE token = ?'),
 };
@@ -113,7 +115,7 @@ const server = http.createServer(async (req, res) => {
     const result = stmts.insertUser.run(username, hash, salt, displayName);
     const token = generateToken();
     stmts.insertSession.run(result.lastInsertRowid, token);
-    return jsonResponse(res, 201, { token, username, displayName, preferredColor: '', profilePicture: '' });
+    return jsonResponse(res, 201, { token, username, displayName, preferredColor: '', profilePicture: '', email: '' });
   }
 
   if (req.method === 'POST' && req.url === '/api/login') {
@@ -132,7 +134,7 @@ const server = http.createServer(async (req, res) => {
     }
     const token = generateToken();
     stmts.insertSession.run(user.id, token);
-    return jsonResponse(res, 200, { token, username: user.username, displayName: user.display_name, preferredColor: user.preferred_color, profilePicture: user.profile_picture || '' });
+    return jsonResponse(res, 200, { token, username: user.username, displayName: user.display_name, preferredColor: user.preferred_color, profilePicture: user.profile_picture || '', email: user.email || '' });
   }
 
   if (req.method === 'GET' && req.url === '/api/me') {
@@ -140,7 +142,7 @@ const server = http.createServer(async (req, res) => {
     if (!session) {
       return jsonResponse(res, 401, { error: 'Not authenticated' });
     }
-    return jsonResponse(res, 200, { username: session.username, displayName: session.display_name, preferredColor: session.preferred_color, profilePicture: session.profile_picture || '' });
+    return jsonResponse(res, 200, { username: session.username, displayName: session.display_name, preferredColor: session.preferred_color, profilePicture: session.profile_picture || '', email: session.email || '' });
   }
 
   if (req.method === 'POST' && req.url === '/api/update-profile') {
@@ -152,8 +154,9 @@ const server = http.createServer(async (req, res) => {
     if (!body) return jsonResponse(res, 400, { error: 'Invalid request' });
     const displayName = (body.displayName || session.display_name).trim().slice(0, 16);
     const preferredColor = body.preferredColor || session.preferred_color || '';
-    stmts.updateProfile.run(displayName, preferredColor, session.user_id);
-    return jsonResponse(res, 200, { displayName, preferredColor });
+    const email = body.email !== undefined ? body.email.trim().slice(0, 100) : (session.email || '');
+    stmts.updateProfile.run(displayName, preferredColor, email, session.user_id);
+    return jsonResponse(res, 200, { displayName, preferredColor, email });
   }
 
   if (req.method === 'POST' && req.url === '/api/upload-picture') {

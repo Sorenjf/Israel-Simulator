@@ -74,6 +74,45 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 .lobby-pfp { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(233,69,96,0.3); }
 .pc-pfp { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; }
 
+/* ── Profile Modal ── */
+#profile-modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+  align-items: center; justify-content: center;
+}
+#profile-modal-overlay.open { display: flex; }
+#profile-modal {
+  background: linear-gradient(135deg, rgba(20,16,40,0.95) 0%, rgba(12,10,28,0.98) 100%);
+  border: 1px solid rgba(233,69,96,0.25); border-radius: 20px;
+  padding: 32px; width: 380px; max-width: 90vw; text-align: center;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+  position: relative;
+}
+#profile-modal h3 {
+  font-family: 'Orbitron', sans-serif; font-size: 1.1em; color: #e94560;
+  letter-spacing: 1px; margin-bottom: 20px;
+}
+.profile-close {
+  position: absolute; top: 12px; right: 16px; font-size: 1.4em; color: #555;
+  cursor: pointer; line-height: 1; transition: color 0.2s;
+}
+.profile-close:hover { color: #e94560; }
+.profile-pfp-area {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 18px;
+}
+.profile-pfp-circle {
+  width: 80px; height: 80px; border-radius: 50%; border: 3px solid rgba(233,69,96,0.3);
+  overflow: hidden; cursor: pointer; transition: border-color 0.3s;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.05);
+}
+.profile-pfp-circle:hover { border-color: #e94560; }
+.profile-pfp-circle img { width: 100%; height: 100%; object-fit: cover; }
+.profile-field { margin-bottom: 12px; text-align: left; }
+.profile-field label { display: block; color: #7a7a9a; font-size: 0.85em; margin-bottom: 4px; }
+.profile-field .val { color: #aaa; font-size: 0.9em; }
+.profile-save-msg { color: #2ecc71; font-size: 0.85em; min-height: 1.2em; margin-top: 8px; }
+
 /* ============ LOBBY ============ */
 #lobby {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -1255,6 +1294,35 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   <div class="auth-skip" onclick="skipAuth()">Back to Lobby</div>
 </div>
 
+<!-- =============== PROFILE MODAL =============== -->
+<div id="profile-modal-overlay" onclick="if(event.target===this)closeProfileModal()">
+  <div id="profile-modal">
+    <span class="profile-close" onclick="closeProfileModal()">&times;</span>
+    <h3>Your Profile</h3>
+    <div class="profile-pfp-area">
+      <div class="profile-pfp-circle" id="profile-pfp-circle" onclick="document.getElementById('profile-pfp-input').click()">
+        <span class="pfp-placeholder" id="profile-pfp-placeholder">Click to<br>upload</span>
+      </div>
+      <input type="file" id="profile-pfp-input" accept="image/*" style="display:none" onchange="handleProfilePfpChange(this)">
+      <span class="pfp-upload-btn" onclick="document.getElementById('profile-pfp-input').click()">Change Photo</span>
+    </div>
+    <div class="profile-field">
+      <label>Username</label>
+      <div class="val" id="profile-username">—</div>
+    </div>
+    <div class="profile-field">
+      <label>Display Name</label>
+      <input class="lobby-input" id="profile-display-name" placeholder="Display Name" maxlength="16" style="margin-bottom:0">
+    </div>
+    <div class="profile-field">
+      <label>Email</label>
+      <input class="lobby-input" id="profile-email" placeholder="your@email.com" maxlength="100" type="email" style="margin-bottom:0">
+    </div>
+    <button class="lobby-btn btn-create" onclick="saveProfile()" style="margin-top:16px">Save Changes</button>
+    <div class="profile-save-msg" id="profile-save-msg"></div>
+  </div>
+</div>
+
 <!-- =============== LOBBY SCREEN =============== -->
 <div id="lobby">
   <h1>ISRAEL SIMULATOR</h1>
@@ -1505,12 +1573,12 @@ function updateLobbyAccountInfo() {
   if (!acctInfo) return;
   if (currentUser) {
     const pfpHtml = currentUser.profilePicture
-      ? '<img src="' + currentUser.profilePicture + '" class="lobby-pfp" onclick="document.getElementById(\'lobby-pfp-input\').click()" style="cursor:pointer" title="Click to change">'
-      : '<div class="pfp-preview" style="width:36px;height:36px;display:inline-flex" onclick="document.getElementById(\'lobby-pfp-input\').click()" title="Upload photo"><span class="pfp-placeholder" style="font-size:0.6em">+</span></div>';
+      ? '<img src="' + currentUser.profilePicture + '" class="lobby-pfp" onclick="openProfileModal()" style="cursor:pointer" title="View profile">'
+      : '<div class="pfp-preview" style="width:36px;height:36px;display:inline-flex" onclick="openProfileModal()" title="Set up profile"><span class="pfp-placeholder" style="font-size:0.6em">+</span></div>';
     acctInfo.innerHTML = '<div class="auth-logged-in" style="display:flex;align-items:center;justify-content:center;gap:8px">'
       + pfpHtml
-      + '<input type="file" id="lobby-pfp-input" accept="image/*" style="display:none" onchange="handleLobbyPfpChange(this)">'
       + '<span>Logged in as <strong>' + currentUser.displayName + '</strong></span>'
+      + '<a onclick="openProfileModal()" style="color:#e94560;cursor:pointer">Profile</a>'
       + '<a onclick="authLogout()">Logout</a></div>';
   } else {
     acctInfo.innerHTML = '<div class="auth-logged-in"><a onclick="showAuthScreen()" style="color:#e94560;font-size:1em;cursor:pointer">Login / Register</a></div>';
@@ -1623,6 +1691,82 @@ async function uploadProfilePicture(token, pictureData) {
       body: JSON.stringify({ picture: pictureData })
     });
   } catch {}
+}
+
+// ── Profile Modal ──
+function openProfileModal() {
+  if (!currentUser) return;
+  document.getElementById('profile-username').textContent = '@' + currentUser.username;
+  document.getElementById('profile-display-name').value = currentUser.displayName || '';
+  document.getElementById('profile-email').value = currentUser.email || '';
+  const circle = document.getElementById('profile-pfp-circle');
+  const placeholder = document.getElementById('profile-pfp-placeholder');
+  if (currentUser.profilePicture) {
+    circle.innerHTML = '<img src="' + currentUser.profilePicture + '">';
+  } else {
+    circle.innerHTML = '';
+    circle.appendChild(placeholder);
+    placeholder.style.display = '';
+  }
+  document.getElementById('profile-save-msg').textContent = '';
+  document.getElementById('profile-modal-overlay').classList.add('open');
+}
+
+function closeProfileModal() {
+  document.getElementById('profile-modal-overlay').classList.remove('open');
+}
+
+function handleProfilePfpChange(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 500000) { alert('Image too large (max 500KB)'); return; }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128; canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      const size = Math.min(img.width, img.height);
+      ctx.drawImage(img, (img.width - size) / 2, (img.height - size) / 2, size, size, 0, 0, 128, 128);
+      const resized = canvas.toDataURL('image/jpeg', 0.8);
+      currentUser.profilePicture = resized;
+      document.getElementById('profile-pfp-circle').innerHTML = '<img src="' + resized + '">';
+      uploadProfilePicture(currentUser.token, resized);
+      updateLobbyAccountInfo();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function saveProfile() {
+  if (!currentUser || !currentUser.token) return;
+  const displayName = document.getElementById('profile-display-name').value.trim();
+  const email = document.getElementById('profile-email').value.trim();
+  const msgEl = document.getElementById('profile-save-msg');
+  msgEl.textContent = 'Saving...'; msgEl.style.color = '#7a7a9a';
+  try {
+    const res = await fetch('/api/update-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentUser.token },
+      body: JSON.stringify({ displayName, email, preferredColor: selectedEmoji || currentUser.preferredColor || '' })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      currentUser.displayName = data.displayName;
+      currentUser.email = data.email;
+      // Update lobby name input to match
+      const nameInput = document.getElementById('inp-name');
+      if (nameInput) nameInput.value = data.displayName;
+      updateLobbyAccountInfo();
+      msgEl.textContent = 'Saved!'; msgEl.style.color = '#2ecc71';
+    } else {
+      msgEl.textContent = data.error || 'Save failed'; msgEl.style.color = '#e94560';
+    }
+  } catch {
+    msgEl.textContent = 'Connection error'; msgEl.style.color = '#e94560';
+  }
 }
 
 // On page load: check for existing session, lobby is default
