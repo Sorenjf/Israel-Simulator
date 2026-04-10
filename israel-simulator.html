@@ -531,10 +531,10 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 #center-hud.minimized { opacity: 0.25; }
 #center-hud.minimized:hover { opacity: 1; pointer-events: auto; }
-#hud-player { font-size: 3.5em; line-height: 1; filter: drop-shadow(0 0 16px rgba(0,0,0,0.8)); }
-#hud-player-name { color: #b0b0d0; font-size: 1em; margin-top: 4px; font-weight: 600; font-family: 'Rajdhani', sans-serif; letter-spacing: 1px; }
-#hud-dice { display: flex; gap: 14px; align-items: center; justify-content: center; min-height: 76px; }
-#hud-msg { color: #9090b0; font-size: 0.9em; min-height: 22px; line-height: 1.4; max-width: 320px; font-weight: 500; }
+#hud-player { font-size: 5em; line-height: 1; filter: drop-shadow(0 0 16px rgba(0,0,0,0.8)); }
+#hud-player-name { color: #b0b0d0; font-size: 1.35em; margin-top: 8px; font-weight: 600; font-family: 'Rajdhani', sans-serif; letter-spacing: 1px; }
+#hud-dice { display: flex; gap: 20px; align-items: center; justify-content: center; min-height: 100px; }
+#hud-msg { color: #9090b0; font-size: 1.15em; min-height: 28px; line-height: 1.4; max-width: 480px; font-weight: 500; }
 #hud-buttons { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; pointer-events: auto; }
 .action-btn {
   padding: 11px 24px; border-radius: 24px; border: none; font-size: 13px; cursor: pointer;
@@ -593,7 +593,7 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 /* The 3D cube */
 .dice-cube {
-  width: 3.4rem; height: 3.4rem; position: relative;
+  width: 4.6rem; height: 4.6rem; position: relative;
   transform-style: preserve-3d;
   transition: transform 0.6s cubic-bezier(.2,.85,.3,1.1);
 }
@@ -606,7 +606,7 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 /* Each face */
 .dice-face {
-  position: absolute; width: 3.4rem; height: 3.4rem;
+  position: absolute; width: 4.6rem; height: 4.6rem;
   background: linear-gradient(145deg, #fefefe 0%, #f4f4f4 40%, #e8e8ea 100%);
   border-radius: 0.5rem; border: 1px solid rgba(0,0,0,0.06);
   box-shadow: inset 0 2px 4px rgba(255,255,255,0.95), inset 0 -2px 4px rgba(0,0,0,0.06);
@@ -618,12 +618,12 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   backface-visibility: hidden;
 }
 /* Face positions — half of 3.4rem = 1.7rem */
-.dice-face.f-front  { transform: translateZ(1.7rem); }
-.dice-face.f-back   { transform: rotateY(180deg) translateZ(1.7rem); }
-.dice-face.f-right  { transform: rotateY(90deg)  translateZ(1.7rem); }
-.dice-face.f-left   { transform: rotateY(-90deg) translateZ(1.7rem); }
-.dice-face.f-top    { transform: rotateX(90deg)  translateZ(1.7rem); }
-.dice-face.f-bottom { transform: rotateX(-90deg) translateZ(1.7rem); }
+.dice-face.f-front  { transform: translateZ(2.3rem); }
+.dice-face.f-back   { transform: rotateY(180deg) translateZ(2.3rem); }
+.dice-face.f-right  { transform: rotateY(90deg)  translateZ(2.3rem); }
+.dice-face.f-left   { transform: rotateY(-90deg) translateZ(2.3rem); }
+.dice-face.f-top    { transform: rotateX(90deg)  translateZ(2.3rem); }
+.dice-face.f-bottom { transform: rotateX(-90deg) translateZ(2.3rem); }
 /* Dots — deep inset look */
 .dice-dot {
   width: 0.48rem; height: 0.48rem; border-radius: 50%;
@@ -688,8 +688,8 @@ body { font-family: 'Rajdhani', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 /* ============ LOG ============ */
 /* Game log inside center HUD */
 #hud-log {
-  width: 340px; max-height: 120px; overflow-y: auto;
-  margin-top: 8px; pointer-events: auto;
+  width: 480px; max-height: 200px; overflow-y: auto;
+  margin-top: 12px; pointer-events: auto;
   scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.08) transparent;
 }
 #hud-log::-webkit-scrollbar { width: 3px; }
