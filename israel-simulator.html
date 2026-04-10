@@ -1793,6 +1793,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Enter key support for auth forms
   document.getElementById('auth-password')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') authLogin(); });
   document.getElementById('reg-password2')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') authRegister(); });
+
+  // Try to rejoin an active game session after page refresh
+  if (typeof tryAutoRejoin === 'function') {
+    // Delay slightly to let the rest of the page initialize
+    setTimeout(() => { tryAutoRejoin(); }, 300);
+  }
 });
 
 // Booster Cookie icon helper
@@ -1950,12 +1956,28 @@ let pendingGuests = {}; // host only: socketId -> {name, socketId} waiting for c
 let guestSelectedColor = null; // guest only: color picked in join color picker
 let myId = null;
 let roomCode = '';
-let myClientId = 'c_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+// Persist clientId across page reloads so reconnection works after refresh/close
+let myClientId = sessionStorage.getItem('gameClientId');
+if (!myClientId) {
+  myClientId = 'c_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  sessionStorage.setItem('gameClientId', myClientId);
+}
 let reconnectAttempts = 0;
 let reconnectTimer = null;
 let intentionalClose = false;
 let isResumed = false; // true once room is established and reconnection should be attempted
 let reconnectBanner = null;
+
+// Save session info for rejoin after page refresh
+function saveGameSession() {
+  sessionStorage.setItem('gameSession', JSON.stringify({
+    roomCode, isHost, myPlayerIndex, isResumed: true
+  }));
+}
+function clearGameSession() {
+  sessionStorage.removeItem('gameSession');
+  sessionStorage.removeItem('gameClientId');
+}
 let socketIdToPlayerIdx = {}; // host only: guest socketId -> playerIndex
 let playerIdxToSocketId = {}; // host only: playerIndex -> guest socketId
 
@@ -2094,6 +2116,7 @@ function createRoom() {
       addPlayerToState(getPlayerName(), selectedEmoji, currentUser?.profilePicture || '');
       myPlayerIndex = 0;
       gameState.phase = 'waiting';
+      saveGameSession();
       showGameScreenWaiting();
       return;
     }
@@ -2111,6 +2134,7 @@ function createRoom() {
     }
     if (data.type === 'resumeFailed') {
       intentionalClose = true;
+      clearGameSession();
       showReconnectBanner('Connection lost — please refresh to rejoin.');
       return;
     }
@@ -2302,6 +2326,7 @@ function joinRoom() {
     if (data.type === 'joined') {
       isResumed = true;
       reconnectAttempts = 0;
+      saveGameSession();
       document.getElementById('lobby-main').style.display = 'none';
       document.getElementById('lobby-joining').style.display = 'block';
       document.getElementById('lobby-guest-status').textContent = 'Connected! Choose your color to join.';
@@ -2314,6 +2339,7 @@ function joinRoom() {
     }
     if (data.type === 'resumeFailed') {
       intentionalClose = true;
+      clearGameSession();
       showReconnectBanner('Host is no longer available — please refresh.');
       return;
     }
@@ -2404,6 +2430,7 @@ function attemptReconnect() {
       }
       if (data.type === 'resumeFailed') {
         intentionalClose = true;
+        clearGameSession();
         showReconnectBanner('Session expired — please refresh.');
         return;
       }
@@ -2420,11 +2447,13 @@ function attemptReconnect() {
       }
       if (data.type === 'resumeFailed') {
         intentionalClose = true;
+        clearGameSession();
         showReconnectBanner('Host is no longer available — please refresh.');
         return;
       }
       if (data.type === 'hostDisconnected') {
         intentionalClose = true;
+        clearGameSession();
         showReconnectBanner('Host disconnected.');
         return;
       }
@@ -2446,6 +2475,32 @@ document.addEventListener('visibilitychange', () => {
     }
   }
 });
+
+// Auto-rejoin on page load if we had an active session
+function tryAutoRejoin() {
+  const raw = sessionStorage.getItem('gameSession');
+  if (!raw) return false;
+  let session;
+  try { session = JSON.parse(raw); } catch { return false; }
+  if (!session.roomCode || !session.isResumed) return false;
+
+  // Restore session state
+  roomCode = session.roomCode;
+  isHost = session.isHost;
+  myPlayerIndex = session.myPlayerIndex;
+  isResumed = true;
+  intentionalClose = false;
+
+  // Hide lobby, show game screen
+  document.getElementById('lobby').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'none';
+  const game = document.getElementById('game');
+  game.style.display = 'flex';
+
+  showReconnectBanner('Rejoining game...');
+  attemptReconnect();
+  return true;
+}
 
 // HOST: handle messages from guests (via relay server)
 function handleHostMessage(data) {
@@ -2505,6 +2560,7 @@ function wsSend(data) {
 function handleGuestMessage(data) {
   if(data.type === 'assignIndex') {
     myPlayerIndex = data.index;
+    saveGameSession();
   }
   if(data.type === 'state') {
     gameState = data.state;
@@ -4062,6 +4118,7 @@ function doBankrupt(pi, creditor) {
   const alive = gameState.players.filter(pl => !pl.bankrupt);
   if(alive.length <= 1) {
     gameState.phase = 'gameOver';
+    clearGameSession();
     const winner = alive[0];
     gameState.message = `🏆 ${winner.emoji} ${winner.name} WINS THE GAME!`;
     addLog(`🏆 ${winner.emoji} ${winner.name} is the last one standing!`);
