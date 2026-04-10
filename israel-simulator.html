@@ -2699,6 +2699,7 @@ function addPlayerToState(name, emoji, profilePicture) {
     jailTurns: 0,
     jailCards: 0,
     bankrupt: false,
+    skipNextTurn: false,
   });
   return gameState.players.length - 1;
 }
@@ -3174,6 +3175,7 @@ function renderPlayers() {
           <span class="pc-money" id="pc-money-${i}" ${p.money < 0 ? 'style="color:#e94560;font-weight:700"' : ''}>${p.money}${COOKIE_ICON}</span>
           <span class="pc-props">${propCount} props</span>
           ${p.inJail ? '<span class="pc-jail">🔒 Jail</span>' : ''}
+          ${p.skipNextTurn ? '<span class="pc-jail" style="background:rgba(245,166,35,0.15);color:#f5a623;border-color:rgba(245,166,35,0.3)">⏭️ Skip</span>' : ''}
         </div>
         ${colorDots ? `<div class="pc-color-dots">${colorDots}</div>` : ''}
       </div>
@@ -3494,7 +3496,8 @@ function renderActionPanel() {
 
   if(gameState.phase === 'roll') {
     if(me.inJail) {
-      addBtn(`Pay 50${COOKIE_ICON}`, 'btn-pay', () => sendAction('payJail'));
+      const payBtn = addBtn(`Pay 50${COOKIE_ICON}`, 'btn-pay', () => sendAction('payJail'));
+      if(me.money < 50) { payBtn.disabled = true; payBtn.title = `Not enough 🍪 (have ${me.money})`; }
       if(me.jailCards > 0) addBtn('Use Card', 'btn-buy', () => sendAction('useJailCard'));
       addBtn('Roll Doubles', 'btn-roll', () => sendAction('rollJail'));
     } else {
@@ -3521,7 +3524,7 @@ function renderActionPanel() {
       if(inDebt) { endBtn.disabled = true; endBtn.title = 'Resolve debt first — mortgage properties or declare bankruptcy'; }
     }
     if(inDebt) {
-      msg.textContent = `⚠️ In debt! Mortgage properties or declare bankruptcy.`;
+      msg.textContent = `⚠️ In debt! Mortgage properties, trade, or declare bankruptcy.`;
     }
   }
 
@@ -3749,7 +3752,7 @@ function handleLanding(pi) {
           addLog(`${p.emoji} ${p.name} paid ${rent}{C} rent on ${cell.name} to ${ownerP.emoji} ${ownerP.name}`);
           if(p.money < 0) {
             gameState.phase = 'postRoll';
-            gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
+            gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties, trade, or declare bankruptcy.`;
             addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}{C}`);
           } else {
             gameState.message = `Paid ${rent}🍪 rent to ${gameState.players[prop.owner].name}`;
@@ -3764,7 +3767,7 @@ function handleLanding(pi) {
       addLog(`${p.emoji} ${p.name} paid ${cell.amount}{C} tax`);
       if(p.money < 0) {
         gameState.phase = 'postRoll';
-        gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
+        gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties, trade, or declare bankruptcy.`;
         addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}{C}`);
       } else {
         gameState.message = `${cell.desc}`;
@@ -3787,10 +3790,14 @@ function handleLanding(pi) {
         // Free parking - collect pot
         if(gameState.freeParkingPot > 0) {
           p.money += gameState.freeParkingPot;
-          addLog(`${p.emoji} ${p.name} collected ${gameState.freeParkingPot}{C} from Free Parking!`);
-          gameState.message = `Collected ${gameState.freeParkingPot}🍪 from the pot!`;
+          addLog(`${p.emoji} ${p.name} collected ${gameState.freeParkingPot}{C} from JACKPOT!`);
+          gameState.message = `Collected ${gameState.freeParkingPot}🍪 from the JACKPOT! Skipping next turn.`;
           gameState.freeParkingPot = 0;
+        } else {
+          gameState.message = `Landed on JACKPOT — nothing in the pot. Skipping next turn.`;
         }
+        p.skipNextTurn = true;
+        addLog(`⏭️ ${p.emoji} ${p.name} will skip their next turn (Jackpot)`);
       } else if(p.position === 30) {
         sendToJail(pi);
       }
@@ -3908,7 +3915,7 @@ function applyCardEffect(pi, card) {
       gameState.freeParkingPot += card.value;
       if(p.money < 0) {
         gameState.phase = 'postRoll';
-        gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
+        gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties, trade, or declare bankruptcy.`;
         addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}{C}`);
       }
       break;
@@ -3940,7 +3947,7 @@ function applyCardEffect(pi, card) {
       others.forEach(o => o.money += card.value);
       if(p.money < 0) {
         gameState.phase = 'postRoll';
-        gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
+        gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties, trade, or declare bankruptcy.`;
         addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}{C}`);
       }
       break;
@@ -3961,7 +3968,7 @@ function applyCardEffect(pi, card) {
       gameState.freeParkingPot += houseCost;
       if(p.money < 0) {
         gameState.phase = 'postRoll';
-        gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
+        gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties, trade, or declare bankruptcy.`;
         addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}{C}`);
       }
       break;
@@ -3980,7 +3987,7 @@ function applyCardEffect(pi, card) {
       addLog(`🔧 ${p.emoji} ${p.name} pays ${repairCost}{C} for repairs (${rHouses} houses, ${rHotels} hotels)`);
       if(p.money < 0) {
         gameState.phase = 'postRoll';
-        gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
+        gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties, trade, or declare bankruptcy.`;
         addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}{C}`);
       }
       break;
@@ -4002,7 +4009,7 @@ function applyCardEffect(pi, card) {
         addLog(`🚇 ${p.emoji} ${p.name} pays ${rrOwner.name} double BART fare: ${rrRent}{C}`);
         if(p.money < 0) {
           gameState.phase = 'postRoll';
-          gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
+          gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties, trade, or declare bankruptcy.`;
           addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}{C}`);
         }
       } else if(rrProp.owner === -1) {
@@ -4028,7 +4035,7 @@ function applyCardEffect(pi, card) {
         addLog(`⚡ ${p.emoji} ${p.name} rolled ${diceRoll} — pays ${utilOwner.name} ${utilRent}{C} utility bill`);
         if(p.money < 0) {
           gameState.phase = 'postRoll';
-          gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
+          gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties, trade, or declare bankruptcy.`;
           addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}{C}`);
         }
       } else if(utilProp.owner === -1) {
@@ -4108,7 +4115,7 @@ function doPayDebt(pi) {
       gameState.freeParkingPot += owed;
     }
     gameState.phase = 'postRoll';
-    gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties or declare bankruptcy.`;
+    gameState.message = `⚠️ In debt (${p.money}🍪)! Mortgage properties, trade, or declare bankruptcy.`;
     addLog(`⚠️ ${p.emoji} ${p.name} is in debt! Owes ${Math.abs(p.money)}{C}`);
   }
 }
@@ -4214,7 +4221,7 @@ function doRollJail(pi) {
 function doEndTurn(pi) {
   const p = gameState.players[pi];
   if(p.money < 0) {
-    gameState.message = '⚠️ Cannot end turn while in debt! Mortgage properties or declare bankruptcy.';
+    gameState.message = '⚠️ Cannot end turn while in debt! Mortgage properties, trade, or declare bankruptcy.';
     return;
   }
   gameState.doublesCount = 0;
@@ -4228,13 +4235,29 @@ function doEndTurn(pi) {
     next = (next + 1) % gameState.players.length;
     safety++;
   }
+
+  // Check if next player must skip their turn (Jackpot penalty)
+  const np = gameState.players[next];
+  if(np.skipNextTurn) {
+    np.skipNextTurn = false;
+    addLog(`⏭️ ${np.emoji} ${np.name}'s turn was skipped (Jackpot)`);
+    // Find the player after the skipped one
+    let next2 = (next + 1) % gameState.players.length;
+    let safety2 = 0;
+    while(gameState.players[next2].bankrupt && safety2 < 10) {
+      next2 = (next2 + 1) % gameState.players.length;
+      safety2++;
+    }
+    next = next2;
+  }
+
   gameState.currentPlayer = next;
   gameState.phase = 'roll';
-  const np = gameState.players[next];
-  gameState.message = `${np.name}'s turn - Roll the dice!`;
+  const nextP = gameState.players[next];
+  gameState.message = `${nextP.name}'s turn - Roll the dice!`;
 
   // Pass & Play: show pass screen for next human player
-  if(isPassAndPlay && !np.isBot) {
+  if(isPassAndPlay && !nextP.isBot) {
     showPassScreen(next);
   }
 }
